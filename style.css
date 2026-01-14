@@ -9,7 +9,7 @@ body {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     min-height: 100vh;
     display: flex;
-    justify-content: center;
+    flex-direction: column;
     align-items: center;
     padding: 20px;
 }
@@ -18,40 +18,46 @@ body {
     background: white;
     border-radius: 20px;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-    max-width: 600px;
+    max-width: 900px;
     width: 100%;
-    padding: 40px;
+    overflow: hidden;
+    flex: 1;
 }
 
 header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 40px;
     text-align: center;
-    margin-bottom: 40px;
 }
 
-h1 {
-    color: #333;
+header h1 {
     font-size: 2.5rem;
     margin-bottom: 10px;
 }
 
 .subtitle {
-    color: #666;
-    font-size: 1rem;
+    font-size: 1.1rem;
+    opacity: 0.9;
+}
+
+main {
+    padding: 40px;
 }
 
 .form-group {
     margin-bottom: 25px;
 }
 
-label {
+.form-group label {
     display: block;
-    color: #333;
     font-weight: 600;
-    margin-bottom: 8px;
-    font-size: 1rem;
+    margin-bottom: 10px;
+    color: #333;
+    font-size: 1.1rem;
 }
 
-input[type="number"] {
+.form-group input {
     width: 100%;
     padding: 15px;
     border: 2px solid #e0e0e0;
@@ -60,20 +66,20 @@ input[type="number"] {
     transition: all 0.3s ease;
 }
 
-input[type="number"]:focus {
+.form-group input:focus {
     outline: none;
     border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.4);
 }
 
 .btn-predict {
     width: 100%;
-    padding: 15px;
+    padding: 18px;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
     border: none;
     border-radius: 10px;
-    font-size: 1.1rem;
+    font-size: 1.2rem;
     font-weight: 600;
     cursor: pointer;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
@@ -81,7 +87,7 @@ input[type="number"]:focus {
 
 .btn-predict:hover {
     transform: translateY(-2px);
-    box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+    box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
 }
 
 .btn-predict:active {
@@ -90,77 +96,107 @@ input[type="number"]:focus {
 
 .result {
     margin-top: 30px;
-    padding: 25px;
-    background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+    padding: 30px;
+    background: #f8f9fa;
     border-radius: 15px;
     border-left: 5px solid #667eea;
 }
 
-.result h2 {
-    color: #333;
-    font-size: 1.5rem;
-    margin-bottom: 15px;
+#predictions-container {
+    display: grid;
+    gap: 15px;
+    margin-bottom: 20px;
 }
 
-.prediction-value {
-    display: flex;
-    justify-content: space-between;
+.prediction-card {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 15px;
     align-items: center;
 }
 
-.prediction-value .label {
-    color: #666;
-    font-size: 1rem;
+.prediction-card .date {
+    font-weight: 600;
+    color: #667eea;
+    font-size: 1.1rem;
 }
 
-.prediction-value .value {
-    color: #667eea;
-    font-size: 2rem;
-    font-weight: bold;
+.prediction-card .sales, .prediction-card .revenue {
+    text-align: center;
+}
+
+.prediction-card .revenue {
+    text-align: right;
+}
+
+.prediction-card .label {
+    display: block;
+    font-size: 0.85rem;
+    color: #666;
+    margin-bottom: 5px;
+}
+
+.prediction-card .value {
+    display: block;
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #333;
+}
+
+.model-info {
+    margin-top: 20px;
+    padding: 15px;
+    background: white;
+    border-radius: 10px;
+    display: flex;
+    justify-content: space-around;
+}
+
+.model-info p {
+    margin: 0;
+    color: #666;
 }
 
 .error {
-    margin-top: 30px;
+    margin-top: 20px;
     padding: 20px;
     background: #fee;
+    border-left: 5px solid #f44;
     border-radius: 10px;
-    border-left: 5px solid #e74c3c;
-}
-
-.error p {
-    color: #c0392b;
-    font-weight: 600;
+    color: #c33;
 }
 
 .hidden {
     display: none;
 }
 
+#predictions-chart {
+    margin-top: 20px;
+    width: 100%;
+}
+
 footer {
+    background: #f8f9fa;
+    padding: 20px;
     text-align: center;
-    margin-top: 40px;
-    color: #999;
+    color: #666;
     font-size: 0.9rem;
 }
 
-@media (max-width: 600px) {
-    .container {
-        padding: 25px;
-    }
-
-    h1 {
+@media (max-width: 768px) {
+    header h1 {
         font-size: 2rem;
     }
 
-    .prediction-value {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 10px;
+    .prediction-card {
+        grid-template-columns: 1fr;
+    }
+
+    .prediction-card .revenue {
+        text-align: center;
     }
 }
-
-
-    <!-- Stats Section -->
-    <section id="stats" class="stats-section">
-        <div class="container">
-            <h2>
