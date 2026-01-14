@@ -47,6 +47,7 @@ function updateDashboard(data) {
 function updateStats(data) {
     const totalSales = data.length;
     const totalRevenue = data.reduce((sum, row) => {
+        // CORREÇÃO AQUI: Garante que o preço seja parseado corretamente
         const price = parseFloat(row.preco.replace('R$ ', '').replace(',', '.'));
         return sum + (isNaN(price) ? 0 : price);
     }, 0);
@@ -73,7 +74,8 @@ function renderTable(data) {
     const tbody = document.getElementById('tableBody');
     tbody.innerHTML = '';
 
-    data.slice(0, 50).forEach(row => { // Limita a 50 linhas para não sobrecarregar a visualização
+    // data.slice(0, 50).forEach(row => { // Limita a 50 linhas para não sobrecarregar a visualização
+    data.forEach(row => { // Mostra todas as linhas por padrão, você pode ajustar o slice se quiser limitar
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td>${row.data_venda || '-'}</td>
@@ -95,6 +97,7 @@ function renderCharts(data) {
             byDate[row.data_venda] = { count: 0, revenue: 0 };
         }
         byDate[row.data_venda].count++;
+        // CORREÇÃO AQUI: Garante que o preço seja parseado corretamente para os gráficos
         const price = parseFloat(row.preco.replace('R$ ', '').replace(',', '.'));
         byDate[row.data_venda].revenue += isNaN(price) ? 0 : price;
     });
@@ -154,18 +157,15 @@ function renderCharts(data) {
 // Preencher dropdown dinâmico
 function populateFilterDropdown(filterType) {
     const dropdown = document.getElementById('filterValue');
-    const textInput = document.getElementById('filterTextInput');
 
     dropdown.innerHTML = '<option value="">Escolha uma opção...</option>';
 
     if (filterType === 'all') {
         dropdown.classList.add('hidden');
-        textInput.classList.add('hidden'); // Esconde o input de texto também
         return;
     }
 
     dropdown.classList.remove('hidden');
-    textInput.classList.add('hidden'); // Garante que o input de texto esteja escondido
 
     const fieldMap = {
         'medicamento': 'nome_produto',
@@ -189,6 +189,44 @@ function populateFilterDropdown(filterType) {
 document.getElementById('filterType').addEventListener('change', (e) => {
     populateFilterDropdown(e.target.value);
 });
+
+document.getElementById('filterBtn').addEventListener('click', () => {
+    const filterType = document.getElementById('filterType').value;
+    const filterValue = document.getElementById('filterValue').value; // Pega o valor do dropdown
+
+    if (filterType === 'all' || !filterValue) {
+        updateDashboard(allData);
+        return;
+    }
+
+    const fieldMap = {
+        'medicamento': 'nome_produto',
+        'cidade': 'unidade',
+        'categoria': 'categoria',
+        'vendedor': 'nome_vendedor'
+    };
+
+    const field = fieldMap[filterType];
+    const filtered = allData.filter(row => row[field] === filterValue);
+
+    updateDashboard(filtered);
+});
+
+document.getElementById('clearBtn').addEventListener('click', () => {
+    document.getElementById('filterType').value = 'all';
+    document.getElementById('filterValue').classList.add('hidden');
+    updateDashboard(allData);
+});
+
+// Atualizar data
+function updateCurrentDate() {
+    const now = new Date();
+    document.getElementById('currentDate').textContent = 
+        now.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+}
+
+// Iniciar
+document.addEventListener('DOMContentLoaded', loadCSV);
 
 document.getElementById('filterBtn').addEventListener('click', () => {
     const filterType = document.getElementById('filterType').value;
