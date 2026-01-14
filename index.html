@@ -3,46 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Previsão de Vendas - Sales Prediction</title>
+    <title>Previsão de Vendas - Farmácia</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>📊 Previsão de Vendas</h1>
-            <p class="subtitle">Sistema inteligente de previsão baseado em Machine Learning</p>
+            <h1>💊 Previsão de Vendas Farmacêuticas</h1>
+            <p class="subtitle">Sistema inteligente de previsão baseado em histórico real</p>
         </header>
 
         <main>
             <form id="predictionForm">
                 <div class="form-group">
-                    <label for="investimento_tv">💰 Investimento em TV (R$)</label>
-                    <input type="number" id="investimento_tv" name="investimento_tv" 
-                           placeholder="Ex: 50000" step="0.01" required>
-                </div>
-
-                <div class="form-group">
-                    <label for="investimento_radio">📻 Investimento em Rádio (R$)</label>
-                    <input type="number" id="investimento_radio" name="investimento_radio" 
-                           placeholder="Ex: 30000" step="0.01" required>
-                </div>
-
-                <div class="form-group">
-                    <label for="investimento_jornal">📰 Investimento em Jornal (R$)</label>
-                    <input type="number" id="investimento_jornal" name="investimento_jornal" 
-                           placeholder="Ex: 20000" step="0.01" required>
+                    <label for="dias">📅 Quantos dias você deseja prever?</label>
+                    <input type="number" id="dias" name="dias" placeholder="Ex: 7" min="1" max="30" value="7" required>
+                    <small>Escolha entre 1 e 30 dias</small>
                 </div>
 
                 <button type="submit" class="btn-predict">
-                    🚀 Prever Vendas
+                    🚀 Gerar Previsão
                 </button>
             </form>
 
             <div id="result" class="result hidden">
-                <h2>Resultado da Previsão</h2>
-                <div class="prediction-value">
-                    <span class="label">Vendas Previstas:</span>
-                    <span class="value" id="predictedValue">R$ 0,00</span>
+                <h2>📊 Resultado da Previsão</h2>
+                <div id="predictions-container"></div>
+                <canvas id="predictions-chart"></canvas>
+                <div class="model-info">
+                    <p><strong>Modelo:</strong> <span id="modelName"></span></p>
+                    <p><strong>Confiança:</strong> <span id="confidence"></span></p>
                 </div>
             </div>
 
@@ -52,9 +42,15 @@
         </main>
 
         <footer>
-            <p>Desenvolvido pela AGILLE AI usando Machine Learning</p>
+            <p>Desenvolvido por AGILLE AI usando Machine Learning</p>
         </footer>
     </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
+
 
     <script src="script.js"></script>
 </body>
