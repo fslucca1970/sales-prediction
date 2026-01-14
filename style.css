@@ -1,34 +1,164 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Previsão de Vendas Farmacêuticas | IA Analytics</title>
-    <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
-</head>
-<body>
-    <!-- Hero Section -->
-    <header class="hero">
-        <div class="container">
-            <nav>
-                <div class="logo">📊 FarmaPredict</div>
-                <ul class="nav-links">
-                    <li><a href="#stats">Estatísticas</a></li>
-                    <li><a href="#prediction">Previsão</a></li>
-                    <li><a href="#produtos">Top Produtos</a></li>
-                </ul>
-            </nav>
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
 
-            <div class="hero-content">
-                <h1>Previsão Inteligente de Vendas</h1>
-                <p>Análise preditiva baseada em Machine Learning para otimizar seu estoque farmacêutico</p>
-                <button class="cta-button" onclick="scrollToSection('prediction')">
-                    Ver Previsões →
-                </button>
-            </div>
-        </div>
-    </header>
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.container {
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    max-width: 600px;
+    width: 100%;
+    padding: 40px;
+}
+
+header {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+h1 {
+    color: #333;
+    font-size: 2.5rem;
+    margin-bottom: 10px;
+}
+
+.subtitle {
+    color: #666;
+    font-size: 1rem;
+}
+
+.form-group {
+    margin-bottom: 25px;
+}
+
+label {
+    display: block;
+    color: #333;
+    font-weight: 600;
+    margin-bottom: 8px;
+    font-size: 1rem;
+}
+
+input[type="number"] {
+    width: 100%;
+    padding: 15px;
+    border: 2px solid #e0e0e0;
+    border-radius: 10px;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+}
+
+input[type="number"]:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.btn-predict {
+    width: 100%;
+    padding: 15px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.btn-predict:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+}
+
+.btn-predict:active {
+    transform: translateY(0);
+}
+
+.result {
+    margin-top: 30px;
+    padding: 25px;
+    background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+    border-radius: 15px;
+    border-left: 5px solid #667eea;
+}
+
+.result h2 {
+    color: #333;
+    font-size: 1.5rem;
+    margin-bottom: 15px;
+}
+
+.prediction-value {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.prediction-value .label {
+    color: #666;
+    font-size: 1rem;
+}
+
+.prediction-value .value {
+    color: #667eea;
+    font-size: 2rem;
+    font-weight: bold;
+}
+
+.error {
+    margin-top: 30px;
+    padding: 20px;
+    background: #fee;
+    border-radius: 10px;
+    border-left: 5px solid #e74c3c;
+}
+
+.error p {
+    color: #c0392b;
+    font-weight: 600;
+}
+
+.hidden {
+    display: none;
+}
+
+footer {
+    text-align: center;
+    margin-top: 40px;
+    color: #999;
+    font-size: 0.9rem;
+}
+
+@media (max-width: 600px) {
+    .container {
+        padding: 25px;
+    }
+
+    h1 {
+        font-size: 2rem;
+    }
+
+    .prediction-value {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+}
+
 
     <!-- Stats Section -->
     <section id="stats" class="stats-section">
