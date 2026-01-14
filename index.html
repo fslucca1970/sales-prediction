@@ -9,91 +9,80 @@
 <body>
     <div class="container">
         <header>
-            <h1>📊 Dashboard de Vendas Farmacêuticas</h1>
-            <p class="subtitle">Histórico + Projeções em Tempo Real</p>
+            <h1>💊 Dashboard de Vendas Farmacêuticas</h1>
+            <p class="subtitle">Histórico + Projeções</p>
         </header>
 
         <main>
-            <!-- Painel de Controle -->
-            <div class="control-panel">
-                <form id="predictionForm">
-                    <div class="form-group">
-                        <label for="dias">📅 Dias para Previsão:</label>
-                        <input type="number" id="dias" name="dias" 
-                               placeholder="Ex: 7" min="1" max="30" value="7" required>
-                    </div>
-                    <button type="submit" class="btn-predict">
-                        🔄 Atualizar Projeções
-                    </button>
-                </form>
-
-                <div class="date-filter">
-                    <label for="historico">📅 Histórico (últimos):</label>
-                    <select id="historico">
-                        <option value="7">7 dias</option>
-                        <option value="15">15 dias</option>
-                        <option value="30">30 dias</option>
-                        <option value="90">3 meses</option>
+            <div class="filters">
+                <div class="filter-group">
+                    <label>Filtrar por:</label>
+                    <select id="filterType">
+                        <option value="all">Todos os dados</option>
+                        <option value="medicamento">Medicamento</option>
+                        <option value="cidade">Cidade</option>
+                        <option value="categoria">Categoria</option>
+                        <option value="vendedor">Vendedor</option>
                     </select>
                 </div>
+                <div class="filter-group">
+                    <input type="text" id="filterValue" placeholder="Digite o valor...">
+                </div>
+                <button id="filterBtn" class="btn-filter">🔍 Filtrar</button>
             </div>
 
-            <!-- Gráficos -->
             <div class="dashboard">
                 <div class="chart-container">
-                    <h2>📈 Evolução de Vendas</h2>
-                    <canvas id="sales-trend-chart"></canvas>
+                    <h2>📈 Histórico de Vendas</h2>
+                    <canvas id="historicalChart"></canvas>
                 </div>
 
                 <div class="chart-container">
-                    <h2>💰 Receita Diária (R$)</h2>
-                    <canvas id="revenue-chart"></canvas>
+                    <h2>🔮 Projeção (Próximos 7 dias)</h2>
+                    <canvas id="projectionChart"></canvas>
                 </div>
             </div>
 
-            <!-- Tabela de Dados -->
-            <div class="data-table">
+            <div class="stats-container">
+                <div class="stat-card">
+                    <span class="label">Total de Vendas</span>
+                    <span class="value" id="totalSales">0</span>
+                </div>
+                <div class="stat-card">
+                    <span class="label">Receita Total</span>
+                    <span class="value" id="totalRevenue">R$ 0,00</span>
+                </div>
+                <div class="stat-card">
+                    <span class="label">Ticket Médio</span>
+                    <span class="value" id="avgTicket">R$ 0,00</span>
+                </div>
+                <div class="stat-card">
+                    <span class="label">Produto Top</span>
+                    <span class="value" id="topProduct">-</span>
+                </div>
+            </div>
+
+            <div class="table-container">
                 <h2>📋 Detalhamento Diário</h2>
-                <div class="table-scroll">
-                    <table id="daily-data">
-                        <thead>
-                            <tr>
-                                <th>Data</th>
-                                <th>Vendas</th>
-                                <th>Receita (R$)</th>
-                                <th>Produto Top</th>
-                                <th>Vendedor Top</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <!-- Dados serão inseridos via JS -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- Painel de Resumo -->
-            <div class="summary-cards">
-                <div class="summary-card">
-                    <span class="label">📅 Hoje</span>
-                    <span class="value">R$ 0,00</span>
-                    <span class="sub">0 vendas</span>
-                </div>
-                <div class="summary-card">
-                    <span class="label">📊 Média Diária</span>
-                    <span class="value">R$ 0,00</span>
-                    <span class="sub">0 vendas</span>
-                </div>
-                <div class="summary-card">
-                    <span class="label">🚀 Projeção Amanhã</span>
-                    <span class="value">R$ 0,00</span>
-                    <span class="sub">0 vendas</span>
-                </div>
+                <table id="dataTable">
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Medicamento</th>
+                            <th>Categoria</th>
+                            <th>Cidade</th>
+                            <th>Vendedor</th>
+                            <th>Preço</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                    </tbody>
+                </table>
             </div>
         </main>
 
         <footer>
-            <p>Atualizado em: <span id="current-date"></span> | Desenvolvido com ❤️ usando Machine Learning</p>
+            <p>Atualizado em: <span id="currentDate"></span></p>
         </footer>
     </div>
 
@@ -101,9 +90,3 @@
     <script src="script.js"></script>
 </body>
 </html>
-
-
-    <script src="script.js"></script>
-</body>
-</html>
-
