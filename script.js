@@ -10,14 +10,14 @@ async function loadCSV() {
         parseCSV(csv);
     } catch (error) {
         console.error('Erro ao carregar CSV:', error);
-        alert('Erro ao carregar dados. Verifique se o arquivo CSV existe.');
+        alert('Erro ao carregar dados. Verifique se o arquivo CSV existe e está no formato correto.');
     }
 }
 
 // Parsear CSV
 function parseCSV(csv) {
     const lines = csv.trim().split('\n');
-    const separatorRegex = /\t|,/;
+    const separatorRegex = /\t|,/; // Tenta tabulação ou vírgula
 
     const headers = lines[0].split(separatorRegex).map(h => h.trim().replace(/"/g, ''));
 
@@ -31,7 +31,8 @@ function parseCSV(csv) {
     }
 
     updateDashboard(allData);
-    populateFilterDropdown('medicamento'); // Preenche o dropdown inicial
+    // Inicializa o dropdown com base no filtro padrão (Todos os dados ou Medicamento)
+    populateFilterDropdown(document.getElementById('filterType').value);
 }
 
 // Atualizar dashboard
@@ -72,7 +73,7 @@ function renderTable(data) {
     const tbody = document.getElementById('tableBody');
     tbody.innerHTML = '';
 
-    data.slice(0, 50).forEach(row => {
+    data.slice(0, 50).forEach(row => { // Limita a 50 linhas para não sobrecarregar a visualização
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td>${row.data_venda || '-'}</td>
@@ -110,7 +111,7 @@ function renderCharts(data) {
             datasets: [{
                 label: 'Vendas por Dia',
                 data: counts,
-                borderColor: 'rgb(0, 72, 18)',
+                borderColor: 'rgb(0, 72, 18)', // Cor do gráfico histórico
                 backgroundColor: 'rgba(0, 72, 18, 0.1)',
                 tension: 0.3,
                 fill: true
@@ -141,7 +142,7 @@ function renderCharts(data) {
             datasets: [{
                 label: 'Vendas Projetadas',
                 data: projectionData,
-                backgroundColor: 'rgba(0, 100, 30, 0.7)',
+                backgroundColor: 'rgba(0, 100, 30, 0.7)', // Cor do gráfico de projeção
                 borderColor: 'rgb(0, 72, 18)',
                 borderWidth: 1
             }]
@@ -153,14 +154,18 @@ function renderCharts(data) {
 // Preencher dropdown dinâmico
 function populateFilterDropdown(filterType) {
     const dropdown = document.getElementById('filterValue');
+    const textInput = document.getElementById('filterTextInput');
+
     dropdown.innerHTML = '<option value="">Escolha uma opção...</option>';
 
     if (filterType === 'all') {
         dropdown.classList.add('hidden');
+        textInput.classList.add('hidden'); // Esconde o input de texto também
         return;
     }
 
     dropdown.classList.remove('hidden');
+    textInput.classList.add('hidden'); // Garante que o input de texto esteja escondido
 
     const fieldMap = {
         'medicamento': 'nome_produto',
@@ -170,7 +175,7 @@ function populateFilterDropdown(filterType) {
     };
 
     const field = fieldMap[filterType];
-    const uniqueValues = [...new Set(allData.map(row => row[field]))].sort();
+    const uniqueValues = allData.length > 0 && field ? [...new Set(allData.map(row => row[field]))].sort() : [];
 
     uniqueValues.forEach(value => {
         const option = document.createElement('option');
@@ -187,7 +192,7 @@ document.getElementById('filterType').addEventListener('change', (e) => {
 
 document.getElementById('filterBtn').addEventListener('click', () => {
     const filterType = document.getElementById('filterType').value;
-    const filterValue = document.getElementById('filterValue').value;
+    const filterValue = document.getElementById('filterValue').value; // Pega o valor do dropdown
 
     if (filterType === 'all' || !filterValue) {
         updateDashboard(allData);
@@ -210,6 +215,7 @@ document.getElementById('filterBtn').addEventListener('click', () => {
 document.getElementById('clearBtn').addEventListener('click', () => {
     document.getElementById('filterType').value = 'all';
     document.getElementById('filterValue').classList.add('hidden');
+    document.getElementById('filterTextInput').classList.add('hidden'); // Esconde o input de texto
     updateDashboard(allData);
 });
 
