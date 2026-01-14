@@ -3,18 +3,20 @@ const API_URL = 'https://sales-prediction-mxgp.onrender.com/predict';
 document.getElementById('predictionForm').addEventListener('submit', async function(e) {
     e.preventDefault();
 
-    const investimentoTV = parseFloat(document.getElementById('investimento_tv').value);
-    const investimentoRadio = parseFloat(document.getElementById('investimento_radio').value);
-    const investimentoJornal = parseFloat(document.getElementById('investimento_jornal').value);
+    const dias = parseInt(document.getElementById('dias').value);
 
     const resultDiv = document.getElementById('result');
     const errorDiv = document.getElementById('error');
-    const predictedValueSpan = document.getElementById('predictedValue');
+    const predictionsContainer = document.getElementById('predictions-container');
+    const predictionsChart = document.getElementById('predictions-chart');
+    const modelNameSpan = document.getElementById('modelName');
+    const confidenceSpan = document.getElementById('confidence');
     const errorMessageP = document.getElementById('errorMessage');
 
     // Esconder mensagens anteriores
     resultDiv.classList.add('hidden');
     errorDiv.classList.add('hidden');
+    predictionsContainer.innerHTML = '';
 
     try {
         const response = await fetch(API_URL, {
@@ -22,11 +24,7 @@ document.getElementById('predictionForm').addEventListener('submit', async funct
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({
-                investimento_tv: investimentoTV,
-                investimento_radio: investimentoRadio,
-                investimento_jornal: investimentoJornal
-            })
+            body: JSON.stringify({ dias: dias })
         });
 
         if (!response.ok) {
@@ -35,18 +33,39 @@ document.getElementById('predictionForm').addEventListener('submit', async funct
 
         const data = await response.json();
 
-        // Formatar o valor em reais
-        const valorFormatado = new Intl.NumberFormat('pt-BR', {
-            style: 'currency',
-            currency: 'BRL'
-        }).format(data.vendas_previstas);
+        // Renderizar cada previsão como um card
+        data.predicoes.forEach(predicao => {
+            const card = document.createElement('div');
+            card.className = 'prediction-card';
+            card.innerHTML = `
+                <div class="date">
+                    <span class="label">📅 Data</span>
+                    <span class="value">${predicao.data}</span>
+                </div>
+                <div class="sales">
+                    <span class="label">🔢 Vendas Previstas</span>
+                    <span class="value">${predicao.vendas_previstas}</span>
+                </div>
+                <div class="revenue">
+                    <span class="label">💰 Receita Prevista</span>
+                    <span class="value">${predicao.receita_prevista}</span>
+                </div>
+            `;
+            predictionsContainer.appendChild(card);
+        });
 
-        predictedValueSpan.textContent = valorFormatado;
-        resultDiv.classList.remove('hidden');
+        // Gráfico com Chart.js
+        const labels = data.predicoes.map(pred => pred.data);
+        const vendas = data.predicoes.map(pred => parseFloat(pred.vendas_previstas));
+        const receitas = data.predicoes.map(pred => parseFloat(pred.receita_prevista.replace('R$ ', '').replace(',', '.')));
 
-    } catch (error) {
-        errorMessageP.textContent = '❌ Erro ao conectar com o servidor. Tente novamente.';
-        errorDiv.classList.remove('hidden');
-        console.error('Erro:', error);
-    }
-});
+        const ctx = predictionsChart.getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Vendas Previstas',
+                    data: vendas,
+                    borderColor: 'rgb(75, 192, 1
+
