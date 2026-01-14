@@ -17,9 +17,13 @@ async function loadCSV() {
 // Parsear CSV
 function parseCSV(csv) {
     const lines = csv.trim().split('\n');
-    const separatorRegex = /\t|,/; // Tenta tabulação ou vírgula
+    // Regex mais robusta para separar por tabulação ou vírgula, e ignorar espaços extras
+    const separatorRegex = /[\t,]+/; 
 
     const headers = lines[0].split(separatorRegex).map(h => h.trim().replace(/"/g, ''));
+
+    // Limpa allData antes de preencher novamente
+    allData = []; 
 
     for (let i = 1; i < lines.length; i++) {
         const values = lines[i].split(separatorRegex).map(v => v.trim().replace(/"/g, ''));
@@ -30,8 +34,12 @@ function parseCSV(csv) {
         allData.push(row);
     }
 
+    // Log para verificar se allData foi preenchido corretamente
+    console.log("Dados carregados (allData):", allData); 
+
     updateDashboard(allData);
     // Inicializa o dropdown com base no filtro padrão (Todos os dados ou Medicamento)
+    // Se 'all' for o padrão, o dropdown de valores ficará oculto até que um filtro específico seja escolhido.
     populateFilterDropdown(document.getElementById('filterType').value);
 }
 
@@ -48,14 +56,17 @@ function updateStats(data) {
     const totalSales = data.length;
     const totalRevenue = data.reduce((sum, row) => {
         // CORREÇÃO AQUI: Garante que o preço seja parseado corretamente
-        const price = parseFloat(row.preco.replace('R$ ', '').replace(',', '.'));
+        // Remove "R$", espaços e substitui vírgula por ponto para parseFloat
+        const price = parseFloat(row.preco ? row.preco.replace('R$', '').replace(/\s/g, '').replace(',', '.') : 0);
         return sum + (isNaN(price) ? 0 : price);
     }, 0);
-    const avgTicket = totalRevenue / totalSales;
+    const avgTicket = totalSales > 0 ? totalRevenue / totalSales : 0; // Evita divisão por zero
 
     const products = {};
     data.forEach(row => {
-        products[row.nome_produto] = (products[row.nome_produto] || 0) + 1;
+        if (row.nome_produto) { // Garante que nome_produto exista
+            products[row.nome_produto] = (products[row.nome_produto] || 0) + 1;
+        }
     });
     const topProduct = Object.keys(products).length > 0 ? Object.keys(products).reduce((a, b) => 
         products[a] > products[b] ? a : b
@@ -93,13 +104,15 @@ function renderTable(data) {
 function renderCharts(data) {
     const byDate = {};
     data.forEach(row => {
-        if (!byDate[row.data_venda]) {
-            byDate[row.data_venda] = { count: 0, revenue: 0 };
+        if (row.data_venda) { // Garante que data_venda exista
+            if (!byDate[row.data_venda]) {
+                byDate[row.data_venda] = { count: 0, revenue: 0 };
+            }
+            byDate[row.data_venda].count++;
+            // CORREÇÃO AQUI: Garante que o preço seja parseado corretamente para os gráficos
+            const price = parseFloat(row.preco ? row.preco.replace('R$', '').replace(/\s/g, '').replace(',', '.') : 0);
+            byDate[row.data_venda].revenue += isNaN(price) ? 0 : price;
         }
-        byDate[row.data_venda].count++;
-        // CORREÇÃO AQUI: Garante que o preço seja parseado corretamente para os gráficos
-        const price = parseFloat(row.preco.replace('R$ ', '').replace(',', '.'));
-        byDate[row.data_venda].revenue += isNaN(price) ? 0 : price;
     });
 
     const dates = Object.keys(byDate).sort();
@@ -169,13 +182,17 @@ function populateFilterDropdown(filterType) {
 
     const fieldMap = {
         'medicamento': 'nome_produto',
-        'cidade': 'unidade',
+        'cidade': 'unidade', // Nome da coluna para cidade
         'categoria': 'categoria',
         'vendedor': 'nome_vendedor'
     };
 
     const field = fieldMap[filterType];
-    const uniqueValues = allData.length > 0 && field ? [...new Set(allData.map(row => row[field]))].sort() : [];
+
+    // Garante que 'field' exista e que allData tenha dados antes de tentar mapear
+    const uniqueValues = allData.length > 0 && field 
+        ? [...new Set(allData.map(row => row[field]).filter(value => value !== undefined && value !== null && value !== ''))].sort() 
+        : [];
 
     uniqueValues.forEach(value => {
         const option = document.createElement('option');
@@ -215,45 +232,6 @@ document.getElementById('filterBtn').addEventListener('click', () => {
 document.getElementById('clearBtn').addEventListener('click', () => {
     document.getElementById('filterType').value = 'all';
     document.getElementById('filterValue').classList.add('hidden');
-    updateDashboard(allData);
-});
-
-// Atualizar data
-function updateCurrentDate() {
-    const now = new Date();
-    document.getElementById('currentDate').textContent = 
-        now.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
-}
-
-// Iniciar
-document.addEventListener('DOMContentLoaded', loadCSV);
-
-document.getElementById('filterBtn').addEventListener('click', () => {
-    const filterType = document.getElementById('filterType').value;
-    const filterValue = document.getElementById('filterValue').value; // Pega o valor do dropdown
-
-    if (filterType === 'all' || !filterValue) {
-        updateDashboard(allData);
-        return;
-    }
-
-    const fieldMap = {
-        'medicamento': 'nome_produto',
-        'cidade': 'unidade',
-        'categoria': 'categoria',
-        'vendedor': 'nome_vendedor'
-    };
-
-    const field = fieldMap[filterType];
-    const filtered = allData.filter(row => row[field] === filterValue);
-
-    updateDashboard(filtered);
-});
-
-document.getElementById('clearBtn').addEventListener('click', () => {
-    document.getElementById('filterType').value = 'all';
-    document.getElementById('filterValue').classList.add('hidden');
-    document.getElementById('filterTextInput').classList.add('hidden'); // Esconde o input de texto
     updateDashboard(allData);
 });
 
