@@ -10,17 +10,22 @@ async function loadCSV() {
         parseCSV(csv);
     } catch (error) {
         console.error('Erro ao carregar CSV:', error);
-        alert('Erro ao carregar dados. Verifique se o arquivo CSV existe.');
+        alert('Erro ao carregar dados. Verifique se o arquivo CSV existe e está no formato correto.');
     }
 }
 
 // Parsear CSV
 function parseCSV(csv) {
     const lines = csv.trim().split('\n');
-    const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+    // Detecta o separador: tenta vírgula, se não, tenta tabulação ou múltiplos espaços
+    // Usaremos uma regex para cobrir tabulações e múltiplos espaços como separador
+    const separatorRegex = /\t|,/ ; // Tenta tabulação ou vírgula
+
+    const headers = lines[0].split(separatorRegex).map(h => h.trim().replace(/"/g, ''));
 
     for (let i = 1; i < lines.length; i++) {
-        const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
+        // Divide a linha usando a mesma regex do cabeçalho
+        const values = lines[i].split(separatorRegex).map(v => v.trim().replace(/"/g, ''));
         const row = {};
         headers.forEach((header, index) => {
             row[header] = values[index];
@@ -52,9 +57,9 @@ function updateStats(data) {
     data.forEach(row => {
         products[row.nome_produto] = (products[row.nome_produto] || 0) + 1;
     });
-    const topProduct = Object.keys(products).reduce((a, b) => 
+    const topProduct = Object.keys(products).length > 0 ? Object.keys(products).reduce((a, b) => 
         products[a] > products[b] ? a : b
-    );
+    ) : '-'; // Adicionado tratamento para caso não haja produtos
 
     document.getElementById('totalSales').textContent = totalSales;
     document.getElementById('totalRevenue').textContent = 
@@ -69,15 +74,16 @@ function renderTable(data) {
     const tbody = document.getElementById('tableBody');
     tbody.innerHTML = '';
 
+    // Limita a 50 linhas para não sobrecarregar a visualização
     data.slice(0, 50).forEach(row => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td>${row.data_venda}</td>
-            <td>${row.nome_produto}</td>
-            <td>${row.categoria}</td>
-            <td>${row.unidade}</td>
-            <td>${row.nome_vendedor}</td>
-            <td>${row.preco}</td>
+            <td>${row.data_venda || '-'}</td>
+            <td>${row.nome_produto || '-'}</td>
+            <td>${row.categoria || '-'}</td>
+            <td>${row.unidade || '-'}</td>
+            <td>${row.nome_vendedor || '-'}</td>
+            <td>${row.preco || '-'}</td>
         `;
         tbody.appendChild(tr);
     });
@@ -120,12 +126,12 @@ function renderCharts(data) {
     });
 
     // Projeção simples (média móvel)
-    const avgSales = counts.reduce((a, b) => a + b, 0) / counts.length;
+    const avgSales = counts.length > 0 ? counts.reduce((a, b) => a + b, 0) / counts.length : 0;
     const projectionDays = 7;
     const projectionLabels = [];
     const projectionData = [];
 
-    const lastDate = new Date(dates[dates.length - 1]);
+    const lastDate = dates.length > 0 ? new Date(dates[dates.length - 1]) : new Date();
     for (let i = 1; i <= projectionDays; i++) {
         const nextDate = new Date(lastDate);
         nextDate.setDate(nextDate.getDate() + i);
@@ -163,11 +169,13 @@ document.getElementById('filterBtn').addEventListener('click', () => {
     }
 
     const filtered = allData.filter(row => {
-        const field = row[filterType === 'medicamento' ? 'nome_produto' : 
-                         filterType === 'cidade' ? 'unidade' :
-                         filterType === 'categoria' ? 'categoria' :
-                         'nome_vendedor'];
-        return field.toLowerCase().includes(filterValue);
+        let field = '';
+        if (filterType === 'medicamento') field = row.nome_produto;
+        else if (filterType === 'cidade') field = row.unidade;
+        else if (filterType === 'categoria') field = row.categoria;
+        else if (filterType === 'vendedor') field = row.nome_vendedor;
+
+        return field && field.toLowerCase().includes(filterValue);
     });
 
     updateDashboard(filtered);
