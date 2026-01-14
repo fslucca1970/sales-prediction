@@ -31,6 +31,8 @@ function parseCSV(csv) {
     }
 
     updateDashboard(allData);
+    // Adicionado: Popular o dropdown de filtro inicial
+    populateFilterDropdown(document.getElementById('filterType').value);
 }
 
 // Atualizar dashboard
@@ -169,7 +171,8 @@ function populateFilterDropdown(filterType) {
     };
 
     const field = fieldMap[filterType];
-    const uniqueValues = [...new Set(allData.map(row => row[field]))].sort();
+    // Garante que 'field' não seja undefined e que allData tenha dados
+    const uniqueValues = allData.length > 0 && field ? [...new Set(allData.map(row => row[field]))].sort() : [];
 
     uniqueValues.forEach(value => {
         const option = document.createElement('option');
