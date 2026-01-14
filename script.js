@@ -17,14 +17,11 @@ async function loadCSV() {
 // Parsear CSV
 function parseCSV(csv) {
     const lines = csv.trim().split('\n');
-    // Detecta o separador: tenta vírgula, se não, tenta tabulação ou múltiplos espaços
-    // Usaremos uma regex para cobrir tabulações e múltiplos espaços como separador
-    const separatorRegex = /\t|,/ ; // Tenta tabulação ou vírgula
+    const separatorRegex = /\t|,/;
 
     const headers = lines[0].split(separatorRegex).map(h => h.trim().replace(/"/g, ''));
 
     for (let i = 1; i < lines.length; i++) {
-        // Divide a linha usando a mesma regex do cabeçalho
         const values = lines[i].split(separatorRegex).map(v => v.trim().replace(/"/g, ''));
         const row = {};
         headers.forEach((header, index) => {
@@ -59,7 +56,7 @@ function updateStats(data) {
     });
     const topProduct = Object.keys(products).length > 0 ? Object.keys(products).reduce((a, b) => 
         products[a] > products[b] ? a : b
-    ) : '-'; // Adicionado tratamento para caso não haja produtos
+    ) : '-';
 
     document.getElementById('totalSales').textContent = totalSales;
     document.getElementById('totalRevenue').textContent = 
@@ -74,7 +71,6 @@ function renderTable(data) {
     const tbody = document.getElementById('tableBody');
     tbody.innerHTML = '';
 
-    // Limita a 50 linhas para não sobrecarregar a visualização
     data.slice(0, 50).forEach(row => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
@@ -91,7 +87,6 @@ function renderTable(data) {
 
 // Renderizar gráficos
 function renderCharts(data) {
-    // Agrupar por data
     const byDate = {};
     data.forEach(row => {
         if (!byDate[row.data_venda]) {
@@ -104,9 +99,7 @@ function renderCharts(data) {
 
     const dates = Object.keys(byDate).sort();
     const counts = dates.map(d => byDate[d].count);
-    const revenues = dates.map(d => byDate[d].revenue);
 
-    // Gráfico histórico
     const ctx1 = document.getElementById('historicalChart').getContext('2d');
     if (historicalChart) historicalChart.destroy();
     historicalChart = new Chart(ctx1, {
@@ -116,8 +109,8 @@ function renderCharts(data) {
             datasets: [{
                 label: 'Vendas por Dia',
                 data: counts,
-                borderColor: '#667eea',
-                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                borderColor: 'rgb(0, 72, 18)',
+                backgroundColor: 'rgba(0, 72, 18, 0.1)',
                 tension: 0.3,
                 fill: true
             }]
@@ -125,7 +118,6 @@ function renderCharts(data) {
         options: { responsive: true, plugins: { legend: { position: 'top' } } }
     });
 
-    // Projeção simples (média móvel)
     const avgSales = counts.length > 0 ? counts.reduce((a, b) => a + b, 0) / counts.length : 0;
     const projectionDays = 7;
     const projectionLabels = [];
@@ -139,7 +131,6 @@ function renderCharts(data) {
         projectionData.push(Math.round(avgSales * (0.95 + Math.random() * 0.1)));
     }
 
-    // Gráfico projeção
     const ctx2 = document.getElementById('projectionChart').getContext('2d');
     if (projectionChart) projectionChart.destroy();
     projectionChart = new Chart(ctx2, {
@@ -149,8 +140,8 @@ function renderCharts(data) {
             datasets: [{
                 label: 'Vendas Projetadas',
                 data: projectionData,
-                backgroundColor: 'rgba(231, 76, 60, 0.7)',
-                borderColor: '#e74c3c',
+                backgroundColor: 'rgba(0, 100, 30, 0.7)',
+                borderColor: 'rgb(0, 72, 18)',
                 borderWidth: 1
             }]
         },
@@ -158,27 +149,67 @@ function renderCharts(data) {
     });
 }
 
-// Filtrar dados
+// Preencher dropdown dinâmico
+function populateFilterDropdown(filterType) {
+    const dropdown = document.getElementById('filterValue');
+    dropdown.innerHTML = '<option value="">Escolha uma opção...</option>';
+
+    if (filterType === 'all') {
+        dropdown.classList.add('hidden');
+        return;
+    }
+
+    dropdown.classList.remove('hidden');
+
+    const fieldMap = {
+        'medicamento': 'nome_produto',
+        'cidade': 'unidade',
+        'categoria': 'categoria',
+        'vendedor': 'nome_vendedor'
+    };
+
+    const field = fieldMap[filterType];
+    const uniqueValues = [...new Set(allData.map(row => row[field]))].sort();
+
+    uniqueValues.forEach(value => {
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = value;
+        dropdown.appendChild(option);
+    });
+}
+
+// Event Listeners
+document.getElementById('filterType').addEventListener('change', (e) => {
+    populateFilterDropdown(e.target.value);
+});
+
 document.getElementById('filterBtn').addEventListener('click', () => {
     const filterType = document.getElementById('filterType').value;
-    const filterValue = document.getElementById('filterValue').value.toLowerCase();
+    const filterValue = document.getElementById('filterValue').value;
 
     if (filterType === 'all' || !filterValue) {
         updateDashboard(allData);
         return;
     }
 
-    const filtered = allData.filter(row => {
-        let field = '';
-        if (filterType === 'medicamento') field = row.nome_produto;
-        else if (filterType === 'cidade') field = row.unidade;
-        else if (filterType === 'categoria') field = row.categoria;
-        else if (filterType === 'vendedor') field = row.nome_vendedor;
+    const fieldMap = {
+        'medicamento': 'nome_produto',
+        'cidade': 'unidade',
+        'categoria': 'categoria',
+        'vendedor': 'nome_vendedor'
+    };
 
-        return field && field.toLowerCase().includes(filterValue);
-    });
+    const field = fieldMap[filterType];
+    const filtered = allData.filter(row => row[field] === filterValue);
 
     updateDashboard(filtered);
+});
+
+document.getElementById('clearBtn').addEventListener('click', () => {
+    document.getElementById('filterType').value = 'all';
+    document.getElementById('filterValue').classList.add('hidden');
+    updateDashboard(allData);
 });
 
 // Atualizar data
