@@ -10,7 +10,7 @@ async function loadCSV() {
         parseCSV(csv);
     } catch (error) {
         console.error('Erro ao carregar CSV:', error);
-        alert('Erro ao carregar dados. Verifique se o arquivo CSV existe e está no formato correto.');
+        alert('Erro ao carregar dados. Verifique se o arquivo CSV existe.');
     }
 }
 
@@ -31,8 +31,7 @@ function parseCSV(csv) {
     }
 
     updateDashboard(allData);
-    // Adicionado: Popular o dropdown de filtro inicial
-    populateFilterDropdown(document.getElementById('filterType').value);
+    populateFilterDropdown('medicamento'); // Preenche o dropdown inicial
 }
 
 // Atualizar dashboard
@@ -171,8 +170,7 @@ function populateFilterDropdown(filterType) {
     };
 
     const field = fieldMap[filterType];
-    // Garante que 'field' não seja undefined e que allData tenha dados
-    const uniqueValues = allData.length > 0 && field ? [...new Set(allData.map(row => row[field]))].sort() : [];
+    const uniqueValues = [...new Set(allData.map(row => row[field]))].sort();
 
     uniqueValues.forEach(value => {
         const option = document.createElement('option');
