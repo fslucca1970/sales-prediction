@@ -3,17 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard de Vendas - Farmácia</title>
+    <title>Dashboard de Vendas Farmacêuticas</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>Dashboard de Vendas - Farmácia</h1>
-        </header>
+    <header>
+        <h1>💊 Dashboard de Vendas Farmacêuticas</h1>
+        <p>Histórico + Projeções - AGILLE AI</p>
+    </header>
 
-        <div class="filters">
+    <main>
+        <!-- Filtros -->
+        <section class="filters">
             <div class="filter-group">
                 <label for="filterCidade">Cidade:</label>
                 <select id="filterCidade">
@@ -23,21 +26,21 @@
 
             <div class="filter-group">
                 <label for="filterCategoria">Categoria:</label>
-                <select id="filterCategoria">
+                <select id="filterCategoria" disabled>
                     <option value="all">Todas as Categorias</option>
                 </select>
             </div>
 
             <div class="filter-group">
                 <label for="filterMedicamento">Medicamento:</label>
-                <select id="filterMedicamento">
+                <select id="filterMedicamento" disabled>
                     <option value="all">Todos os Medicamentos</option>
                 </select>
             </div>
 
             <div class="filter-group">
                 <label for="filterVendedor">Vendedor:</label>
-                <select id="filterVendedor">
+                <select id="filterVendedor" disabled>
                     <option value="all">Todos os Vendedores</option>
                 </select>
             </div>
@@ -52,10 +55,11 @@
                 </select>
             </div>
 
-            <button id="clearBtn" class="clear-btn">Limpar Filtros</button>
-        </div>
+            <button id="clearBtn" class="btn-clear">Limpar Filtros</button>
+        </section>
 
-        <div class="stats">
+        <!-- Cards de Estatísticas -->
+        <section class="stats">
             <div class="stat-card">
                 <h3>Total de Vendas</h3>
                 <p id="totalSales">0</p>
@@ -72,39 +76,48 @@
                 <h3>Produto Top</h3>
                 <p id="topProduct">-</p>
             </div>
-        </div>
+        </section>
 
-        <div class="charts">
+        <!-- Gráficos -->
+        <section class="charts">
             <div class="chart-container">
-                <h2>Histórico de Vendas</h2>
+                <h3>📊 Histórico de Vendas</h3>
                 <canvas id="historicalChart"></canvas>
             </div>
             <div class="chart-container">
-                <h2>Projeção de Vendas</h2>
+                <h3>🔮 Projeção de Vendas</h3>
                 <canvas id="projectionChart"></canvas>
             </div>
-        </div>
+        </section>
 
-        <div class="table-container">
-            <h2>Detalhamento por Período</h2>
-            <table id="salesTable">
-                <thead>
-                    <tr>
-                        <th>Período</th>
-                        <th>Medicamento</th>
-                        <th>Categoria</th>
-                        <th>Quantidade</th>
-                        <th>Preço Unitário</th>
-                        <th>Preço Total</th>
-                        <th>Cidade</th>
-                        <th>Vendedor</th>
-                    </tr>
-                </thead>
-                <tbody id="salesTableBody">
-                </tbody>
-            </table>
-        </div>
-    </div>
+        <!-- Tabela de Detalhamento -->
+        <section class="table-section">
+            <h3>📋 Detalhamento Diário (Máximo 500 linhas)</h3>
+            <div class="table-container">
+                <table id="salesTable">
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Medicamento</th>
+                            <th>Categoria</th>
+                            <th>Quantidade</th>
+                            <th>Preço Unitário</th>
+                            <th>Preço Total</th>
+                            <th>Cidade</th>
+                            <th>Vendedor</th>
+                        </tr>
+                    </thead>
+                    <tbody id="salesTableBody">
+                        <!-- Dados serão inseridos aqui -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>Última atualização: <span id="lastUpdateDate">-</span></p>
+    </footer>
 
     <script src="script.js"></script>
 </body>
