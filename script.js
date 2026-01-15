@@ -19,52 +19,61 @@ async function loadCSV() {
 
 // Parsear CSV
 function parseCSV(csv) {
-    const lines = csv.trim().split('\n');
+    try {
+        const lines = csv.trim().split('\n');
 
-    if (lines.length < 2) {
-        console.error('CSV vazio ou inválido');
-        alert('CSV vazio ou inválido');
-        return;
-    }
+        if (lines.length < 2) {
+            console.error('CSV vazio ou inválido');
+            alert('CSV vazio ou inválido');
+            return;
+        }
 
-    // Detecta o separador (tabulação ou vírgula)
-    const firstLine = lines[0];
-    const separator = firstLine.includes('\t') ? '\t' : ',';
+        // Detecta o separador (tabulação ou vírgula)
+        const firstLine = lines[0];
+        const separator = firstLine.includes('\t') ? '\t' : ',';
 
-    const headers = lines[0].split(separator).map(h => h.trim().replace(/"/g, ''));
+        const headers = lines[0].split(separator).map(h => h.trim().replace(/"/g, ''));
 
-    console.log("Cabeçalhos do CSV:", headers);
+        console.log("Cabeçalhos do CSV:", headers);
 
-    allData = [];
+        allData = [];
 
-    for (let i = 1; i < lines.length; i++) {
-        if (!lines[i].trim()) continue;
+        for (let i = 1; i < lines.length; i++) {
+            if (!lines[i].trim()) continue;
 
-        const values = lines[i].split(separator).map(v => v.trim().replace(/"/g, ''));
-        const row = {};
+            const values = lines[i].split(separator).map(v => v.trim().replace(/"/g, ''));
+            const row = {};
 
-        headers.forEach((header, index) => {
-            row[header] = values[index] || '';
-        });
+            headers.forEach((header, index) => {
+                row[header] = values[index] || '';
+            });
 
-        allData.push(row);
-    }
+            allData.push(row);
+        }
 
-    console.log("Dados carregados (allData):", allData);
-    console.log("Total de registros:", allData.length);
-    console.log("Primeira linha de dados:", allData[0]);
+        console.log("Dados carregados (allData):", allData);
+        console.log("Total de registros:", allData.length);
+        console.log("Primeira linha de dados:", allData[0]);
 
-    if (allData.length === 0) {
-        alert('Nenhum dado foi carregado do CSV.');
-        return;
-    }
+        if (allData.length === 0) {
+            alert('Nenhum dado foi carregado do CSV.');
+            return;
+        }
 
-    updateDashboard(allData);
+        // Atualiza o dashboard com os dados carregados
+        updateDashboard(allData);
 
-    // Inicializa o dropdown
-    const filterTypeElement = document.getElementById('filterType');
-    if (filterTypeElement) {
-        populateFilterDropdown(filterTypeElement.value);
+        // Inicializa o dropdown após um pequeno delay para garantir que o DOM está pronto
+        setTimeout(() => {
+            const filterTypeElement = document.getElementById('filterType');
+            if (filterTypeElement) {
+                populateFilterDropdown(filterTypeElement.value);
+            }
+        }, 100);
+
+    } catch (error) {
+        console.error('Erro ao fazer parsing do CSV:', error);
+        alert('Erro ao fazer parsing do CSV: ' + error.message);
     }
 }
 
@@ -126,7 +135,10 @@ function updateStats(data) {
 // Renderizar tabela
 function renderTable(data) {
     const tbody = document.getElementById('tableBody');
-    if (!tbody) return;
+    if (!tbody) {
+        console.error('Elemento tableBody não encontrado');
+        return;
+    }
 
     tbody.innerHTML = '';
 
@@ -149,8 +161,14 @@ function renderTable(data) {
 // Renderizar gráficos
 function renderCharts(data) {
     // Destrói gráficos existentes para evitar sobreposição
-    if (historicalChart) historicalChart.destroy();
-    if (projectionChart) projectionChart.destroy();
+    if (historicalChart) {
+        historicalChart.destroy();
+        historicalChart = null;
+    }
+    if (projectionChart) {
+        projectionChart.destroy();
+        projectionChart = null;
+    }
 
     if (data.length === 0) {
         // Se não há dados, os gráficos ficam vazios
@@ -248,8 +266,10 @@ function renderCharts(data) {
 // Preencher dropdown dinâmico
 function populateFilterDropdown(filterType) {
     const dropdown = document.getElementById('filterValue');
+
+    // Proteção contra null
     if (!dropdown) {
-        console.error('Elemento filterValue não encontrado');
+        console.error('Elemento filterValue não encontrado no DOM');
         return;
     }
 
@@ -307,11 +327,14 @@ function updateCurrentDate() {
 
 // Inicialização - TODOS os Event Listeners dentro do DOMContentLoaded
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('DOM carregado. Iniciando carregamento do CSV...');
+
     loadCSV();
 
     const filterTypeEl = document.getElementById('filterType');
     if (filterTypeEl) {
         filterTypeEl.addEventListener('change', (e) => {
+            console.log('Filtro alterado para:', e.target.value);
             populateFilterDropdown(e.target.value);
         });
     }
@@ -321,6 +344,8 @@ document.addEventListener('DOMContentLoaded', () => {
         filterBtn.addEventListener('click', () => {
             const filterType = document.getElementById('filterType').value;
             const filterValue = document.getElementById('filterValue').value;
+
+            console.log('Filtro clicado:', filterType, filterValue);
 
             if (filterType === 'all' || !filterValue) {
                 updateDashboard(allData);
