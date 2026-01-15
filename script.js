@@ -84,8 +84,9 @@ function updateStats(data) {
     const totalRevenue = data.reduce((sum, row) => {
         if (!row.preco) return sum;
 
-        const cleanPrice = row.preco.replace(/R\$\s*/g, '').replace(/\s/g, '').replace(',', '.');
-        const price = parseFloat(cleanPrice);
+        // Remove "R$", espaços e substitui vírgula por ponto
+        const priceStr = row.preco.toString().replace('R$', '').replace(/\s/g, '').replace(',', '.');
+        const price = parseFloat(priceStr);
 
         return sum + (isNaN(price) ? 0 : price);
     }, 0);
@@ -104,22 +105,25 @@ function updateStats(data) {
         : '-';
 
     document.getElementById('totalSales').textContent = totalSales;
-    document.getElementById('totalRevenue').textContent = 
-        new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalRevenue);
-    document.getElementById('avgTicket').textContent = 
-        new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(avgTicket);
+    document.getElementById('totalRevenue').textContent = `R$ ${totalRevenue.toFixed(2).replace('.', ',')}`;
+    document.getElementById('avgTicket').textContent = `R$ ${avgTicket.toFixed(2).replace('.', ',')}`;
     document.getElementById('topProduct').textContent = topProduct;
 }
 
 // Renderizar tabela
 function renderTable(data) {
     const tbody = document.getElementById('tableBody');
+    if (!tbody) return;
+
     tbody.innerHTML = '';
 
-    data.forEach(row => {
+    // Limita a 50 linhas para performance
+    const displayData = data.slice(0, 50);
+
+    displayData.forEach(row => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td>${row.data_venda || '-'}</td>
+            <td>${row.data || '-'}</td>
             <td>${row.nome_produto || '-'}</td>
             <td>${row.categoria || '-'}</td>
             <td>${row.unidade || '-'}</td>
@@ -132,65 +136,91 @@ function renderTable(data) {
 
 // Renderizar gráficos
 function renderCharts(data) {
-    const salesByDate = {};
+    if (data.length === 0) return;
 
+    // Agrupa vendas por data
+    const salesByDate = {};
     data.forEach(row => {
-        const date = row.data_venda || 'Sem data';
-        salesByDate[date] = (salesByDate[date] || 0) + 1;
+        const date = row.data;
+        if (date) {
+            salesByDate[date] = (salesByDate[date] || 0) + 1;
+        }
     });
 
+    // Ordena as datas
     const sortedDates = Object.keys(salesByDate).sort();
-    const historicalLabels = sortedDates;
-    const historicalData = sortedDates.map(date => salesByDate[date]);
+    const salesValues = sortedDates.map(date => salesByDate[date]);
 
-    // Gráfico Histórico
-    const ctx1 = document.getElementById('historicalChart');
-    if (ctx1) {
-        if (historicalChart) historicalChart.destroy();
+    // Gráfico de histórico
+    const historicalCtx = document.getElementById('historicalChart');
+    if (historicalCtx) {
+        if (historicalChart) {
+            historicalChart.destroy();
+        }
 
-        historicalChart = new Chart(ctx1, {
+        historicalChart = new Chart(historicalCtx, {
             type: 'line',
             data: {
-                labels: historicalLabels,
+                labels: sortedDates,
                 datasets: [{
                     label: 'Vendas Diárias',
-                    data: historicalData,
-                    backgroundColor: 'rgba(0, 72, 18, 0.2)',
+                    data: salesValues,
                     borderColor: 'rgb(0, 72, 18)',
-                    borderWidth: 2,
-                    tension: 0.4
+                    backgroundColor: 'rgba(0, 72, 18, 0.1)',
+                    tension: 0.4,
+                    fill: true
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: true,
-                plugins: { legend: { position: 'top' } }
+                plugins: {
+                    legend: { position: 'top' }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                }
             }
         });
     }
 
-    // Projeção (média dos últimos 7 dias)
-    const lastSevenDays = historicalData.slice(-7);
-    const avgSales = lastSevenDays.length > 0 
-        ? lastSevenDays.reduce((a, b) => a + b, 0) / lastSevenDays.length 
-        : 0;
+    // Gráfico de projeção (média móvel simples dos últimos 7 dias)
+    const projectionCtx = document.getElementById('projectionChart');
+    if (projectionCtx && salesValues.length > 0) {
+        if (projectionChart) {
+            projectionChart.destroy();
+        }
 
-    const projectionLabels = ['Dia 1', 'Dia 2', 'Dia 3', 'Dia 4', 'Dia 5', 'Dia 6', 'Dia 7'];
-    const projectionData = Array(7).fill(Math.round(avgSales));
+        // Calcula média dos últimos 7 dias (ou todos se menos de 7)
+        const last7Days = salesValues.slice(-7);
+        const avgSales = last7Days.reduce((a, b) => a + b, 0) / last7Days.length;
 
-    // Gráfico de Projeção
-    const ctx2 = document.getElementById('projectionChart');
-    if (ctx2) {
-        if (projectionChart) projectionChart.destroy();
+        // Projeção para os próximos 7 dias
+        const projectionLabels = [];
+        const projectionValues = [];
 
-        projectionChart = new Chart(ctx2, {
+        const lastDate = new Date(sortedDates[sortedDates.length - 1]);
+
+        for (let i = 1; i <= 7; i++) {
+            const nextDate = new Date(lastDate);
+            nextDate.setDate(lastDate.getDate() + i);
+            projectionLabels.push(nextDate.toLocaleDateString('pt-BR'));
+            projectionValues.push(Math.round(avgSales));
+        }
+
+        projectionChart = new Chart(projectionCtx, {
             type: 'bar',
             data: {
                 labels: projectionLabels,
                 datasets: [{
-                    label: 'Vendas Projetadas',
-                    data: projectionData,
-                    backgroundColor: 'rgba(0, 100, 30, 0.7)',
+                    label: 'Projeção de Vendas',
+                    data: projectionValues,
+                    backgroundColor: 'rgba(0, 72, 18, 0.7)',
                     borderColor: 'rgb(0, 72, 18)',
                     borderWidth: 1
                 }]
@@ -198,7 +228,17 @@ function renderCharts(data) {
             options: {
                 responsive: true,
                 maintainAspectRatio: true,
-                plugins: { legend: { position: 'top' } }
+                plugins: {
+                    legend: { position: 'top' }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                }
             }
         });
     }
@@ -207,7 +247,6 @@ function renderCharts(data) {
 // Preencher dropdown dinâmico
 function populateFilterDropdown(filterType) {
     const dropdown = document.getElementById('filterValue');
-
     if (!dropdown) {
         console.error('Elemento filterValue não encontrado');
         return;
