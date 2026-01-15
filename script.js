@@ -48,9 +48,10 @@ function parseCSV(csv) {
                 row[header] = values[index] || '';
             });
 
-            // Parse da data: DD/MM/YYYY para objeto Date
-            const [day, month, year] = row['Data'].split('/');
-            row['ParsedDate'] = new Date(year, month - 1, day); // Mês é 0-indexado
+            // Parse da data: DD/MM/YYYY para objeto Date de forma robusta
+            const dateParts = row['Data'].split('/');
+            // Cria a data no formato YYYY-MM-DD para o construtor Date
+            row['ParsedDate'] = new Date(`${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`);
 
             let rawPrice = row['Preço'].replace('R$', '').trim();
             let precoUnitario = parseFloat(rawPrice);
@@ -184,14 +185,7 @@ function aggregateDataByPeriod(data, period) {
     }));
 
     // Ordena o resultado final usando a chave de ordenação implícita do Object.values
-    // Se a ordenação por data for crítica, precisaríamos de um passo extra aqui
-    // Mas para os rótulos de categoria do Chart.js, a ordem de inserção já é geralmente suficiente
-    // e o sortKey garante que o Object.values retorne em ordem cronológica se as chaves forem ISO strings.
     result.sort((a, b) => {
-        // Para garantir a ordenação correta, especialmente para "Semana de" e "Mês de"
-        // precisamos de uma lógica de ordenação mais robusta aqui, baseada nas datas reais.
-        // Como as chaves de agrupamento (sortKey) já são ordenáveis (ISO string ou YYYY-MM),
-        // podemos usá-las para ordenar o array final.
         const keyA = Object.keys(grouped).find(k => grouped[k].periodo === a.periodo);
         const keyB = Object.keys(grouped).find(k => grouped[k].periodo === b.periodo);
         return keyA.localeCompare(keyB);
@@ -260,7 +254,7 @@ function updateCharts(data) {
             maintainAspectRatio: false,
             scales: {
                 x: {
-                    type: 'category',
+                    type: 'category', // Usa 'category' para rótulos de período
                     title: {
                         display: true,
                         text: 'Período'
