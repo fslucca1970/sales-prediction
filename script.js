@@ -1,6 +1,4 @@
 let allData = [];
-let historicalChart = null;
-let projectionChart = null;
 
 const formatCurrency = (value) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -55,29 +53,23 @@ function parseCSV(csv) {
             alert('CSV vazio ou inválido.');
             return;
         }
-
         let separator = ',';
         if (lines[0].includes(';')) {
             separator = ';';
         } else if (lines[0].includes('\t')) {
             separator = '\t';
         }
-
         const headers = lines[0].split(separator).map(h => h.trim());
         const data = [];
-
         for (let i = 1; i < lines.length; i++) {
             const currentLine = lines[i].trim();
             if (!currentLine) continue; // Pula linhas vazias
-
             const values = currentLine.split(separator);
             const row = {};
             let isValidRow = true;
-
             for (let j = 0; j < headers.length; j++) {
                 row[headers[j]] = values[j] ? values[j].trim() : '';
             }
-
             // Validar e parsear dados
             const date = parseDateString(row['Data']);
             if (isNaN(date.getTime())) {
@@ -90,7 +82,7 @@ function parseCSV(csv) {
             let precoUnitarioRaw = String(row['Preço']).replace('R$', '').replace(/\./g, '').replace(',', '.').trim();
             const precoUnitario = parseFloat(precoUnitarioRaw);
             if (isNaN(precoUnitario)) {
-                console.warn(`Linha ${i + 1}: Preço Unitário inválido "${row['Preço']}". Usando 0.`);
+                console.warn(`Linha ${i + 1}: Preço Unitário inválido "${row['Preço']}". Linha ignorada.`);
                 isValidRow = false;
             }
             row['Preço Unitário'] = precoUnitario; // Armazenar como 'Preço Unitário' para consistência interna
@@ -98,7 +90,7 @@ function parseCSV(csv) {
             let quantidadeRaw = String(row['Quantidade']).replace('.', '').replace(',', '.').trim();
             const quantidade = parseInt(quantidadeRaw, 10);
             if (isNaN(quantidade)) {
-                console.warn(`Linha ${i + 1}: Quantidade inválida "${row['Quantidade']}". Usando 1.`);
+                console.warn(`Linha ${i + 1}: Quantidade inválida "${row['Quantidade']}". Linha ignorada.`);
                 isValidRow = false;
             }
             row['Quantidade'] = quantidade;
@@ -110,11 +102,9 @@ function parseCSV(csv) {
                 data.push(row);
             }
         }
-
         allData = data;
         console.log(`CSV carregado com sucesso: ${allData.length} registros válidos.`);
         document.getElementById('lastUpdateDate').textContent = new Date().toLocaleDateString('pt-BR');
-
         initializeFilters();
         applyFilters(); // Aplica os filtros iniciais e renderiza tudo
     } catch (error) {
@@ -136,7 +126,6 @@ function populateSelect(elementId, items, defaultOptionText) {
     }
     const currentSelection = select.value;
     select.innerHTML = `<option value="all">${defaultOptionText}</option>`; // Limpa e adiciona opção padrão
-
     items.forEach(item => {
         const option = document.createElement('option');
         option.value = item;
@@ -158,97 +147,34 @@ function initializeFilters() {
     populateSelect('filterMedicamento', getUniqueValues(allData, 'Medicamento'), 'Todos os Medicamentos');
     populateSelect('filterVendedor', getUniqueValues(allData, 'Vendedor'), 'Todos os Vendedores');
 
-    // Habilita os filtros após populá-los
-    document.getElementById('filterCidade').disabled = false;
-    document.getElementById('filterCategoria').disabled = false;
-    document.getElementById('filterMedicamento').disabled = false;
-    document.getElementById('filterVendedor').disabled = false;
+    document.getElementById('filterCidade').addEventListener('change', applyFilters);
+    document.getElementById('filterCategoria').addEventListener('change', applyFilters);
+    document.getElementById('filterMedicamento').addEventListener('change', applyFilters);
+    document.getElementById('filterVendedor').addEventListener('change', applyFilters);
 }
-
-function updateDependentFilters() {
-    const selectedCidade = document.getElementById('filterCidade').value;
-    const selectedCategoria = document.getElementById('filterCategoria').value;
-    const selectedMedicamento = document.getElementById('filterMedicamento').value;
-    const selectedVendedor = document.getElementById('filterVendedor').value;
-
-    let filtered = allData;
-
-    if (selectedCidade !== 'all') {
-        filtered = filtered.filter(item => item['Cidade'] === selectedCidade);
-    }
-    // Não filtra por categoria/medicamento/vendedor ainda, apenas para popular os próximos dropdowns
-    // A filtragem completa é feita em applyFilters
-
-    const categorias = [...new Set(filtered.map(item => item['Categoria']))].sort();
-    const medicamentos = [...new Set(filtered.map(item => item['Medicamento']))].sort();
-    const vendedores = [...new Set(filtered.map(item => item['Vendedor']))].sort();
-
-    populateSelect('filterCategoria', categorias, 'Todas as Categorias');
-    populateSelect('filterMedicamento', medicamentos, 'Todos os Medicamentos');
-    populateSelect('filterVendedor', vendedores, 'Todos os Vendedores');
-
-    // Restaura a seleção se o valor ainda existir
-    if (categorias.includes(selectedCategoria)) {
-        document.getElementById('filterCategoria').value = selectedCategoria;
-    } else {
-        document.getElementById('filterCategoria').value = 'all';
-    }
-    if (medicamentos.includes(selectedMedicamento)) {
-        document.getElementById('filterMedicamento').value = selectedMedicamento;
-    } else {
-        document.getElementById('filterMedicamento').value = 'all';
-    }
-    if (vendedores.includes(selectedVendedor)) {
-        document.getElementById('filterVendedor').value = selectedVendedor;
-    } else {
-        document.getElementById('filterVendedor').value = 'all';
-    }
-}
-
 
 function applyFilters() {
-    let filteredData = allData;
-
     const selectedCidade = document.getElementById('filterCidade').value;
     const selectedCategoria = document.getElementById('filterCategoria').value;
     const selectedMedicamento = document.getElementById('filterMedicamento').value;
     const selectedVendedor = document.getElementById('filterVendedor').value;
-    const selectedPeriodo = document.getElementById('filterPeriodo').value;
 
-    if (selectedCidade !== 'all') {
-        filteredData = filteredData.filter(item => item['Cidade'] === selectedCidade);
-    }
-    if (selectedCategoria !== 'all') {
-        filteredData = filteredData.filter(item => item['Categoria'] === selectedCategoria);
-    }
-    if (selectedMedicamento !== 'all') {
-        filteredData = filteredData.filter(item => item['Medicamento'] === selectedMedicamento);
-    }
-    if (selectedVendedor !== 'all') {
-        filteredData = filteredData.filter(item => item['Vendedor'] === selectedVendedor);
-    }
+    let filteredData = allData.filter(item => {
+        return (selectedCidade === 'all' || item['Cidade'] === selectedCidade) &&
+               (selectedCategoria === 'all' || item['Categoria'] === selectedCategoria) &&
+               (selectedMedicamento === 'all' || item['Medicamento'] === selectedMedicamento) &&
+               (selectedVendedor === 'all' || item['Vendedor'] === selectedVendedor);
+    });
 
     updateStats(filteredData);
-    renderCharts(filteredData, selectedPeriodo);
     updateTable(filteredData); // Chamada correta para a função de atualização da tabela
-}
-
-function clearFilters() {
-    document.getElementById('filterCidade').value = 'all';
-    document.getElementById('filterCategoria').value = 'all';
-    document.getElementById('filterMedicamento').value = 'all';
-    document.getElementById('filterVendedor').value = 'all';
-    document.getElementById('filterPeriodo').value = 'daily';
-    document.getElementById('projectionMetric').value = 'revenue'; // Reseta a métrica de projeção também
-    updateDependentFilters(); // Reseta os filtros dependentes
-    applyFilters();
 }
 
 function updateStats(data) {
     const totalSales = data.length;
     const totalRevenue = data.reduce((sum, item) => sum + item['Preço Total'], 0);
     const totalUnits = data.reduce((sum, item) => sum + item['Quantidade'], 0);
-    const avgTicket = totalSales > 0 ? totalRevenue / totalSales : 0;
+    const averageTicket = totalSales > 0 ? totalRevenue / totalSales : 0;
 
     const productCounts = {};
     data.forEach(item => {
@@ -261,249 +187,9 @@ function updateStats(data) {
 
     document.getElementById('totalSales').textContent = formatNumber(totalSales);
     document.getElementById('totalRevenue').textContent = formatCurrency(totalRevenue);
-    document.getElementById('avgTicket').textContent = formatCurrency(avgTicket);
+    document.getElementById('averageTicket').textContent = formatCurrency(averageTicket);
     document.getElementById('topProduct').textContent = topProduct;
-}
-
-function aggregateData(data, period) {
-    const aggregated = {};
-
-    data.forEach(item => {
-        let key;
-        const date = item['Data']; // Usar o objeto Date diretamente
-
-        if (period === 'daily') {
-            key = date.toISOString().split('T')[0]; // YYYY-MM-DD
-        } else if (period === 'weekly') {
-            // Calcula o início da semana (domingo)
-            const d = new Date(date);
-            d.setDate(d.getDate() - d.getDay()); // Volta para o domingo
-            key = d.toISOString().split('T')[0];
-        } else if (period === 'monthly') {
-            key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`; // YYYY-MM
-        }
-
-        if (!aggregated[key]) {
-            aggregated[key] = {
-                revenue: 0,
-                units: 0,
-                date: key // Armazena a chave para ordenação
-            };
-        }
-        aggregated[key].revenue += item['Preço Total'];
-        aggregated[key].units += item['Quantidade'];
-    });
-
-    // Converte para array e ordena por data
-    return Object.values(aggregated).sort((a, b) => new Date(a.date) - new Date(b.date));
-}
-
-function renderCharts(data, period) {
-    const aggregated = aggregateData(data, period);
-
-    // Se não houver dados agregados, não tenta renderizar os gráficos
-    if (aggregated.length === 0) {
-        console.warn("Não há dados agregados para renderizar os gráficos.");
-        if (historicalChart) historicalChart.destroy();
-        if (projectionChart) projectionChart.destroy();
-
-        const historicalCanvas = document.getElementById('historicalChart');
-        const ctxHistorical = historicalCanvas.getContext('2d');
-        ctxHistorical.clearRect(0, 0, historicalCanvas.width, historicalCanvas.height);
-        ctxHistorical.font = "16px Arial";
-        ctxHistorical.textAlign = "center";
-        ctxHistorical.fillStyle = "#666";
-        ctxHistorical.fillText("Sem dados para exibir o histórico.", historicalCanvas.width / 2, historicalCanvas.height / 2);
-
-        const projectionCanvas = document.getElementById('projectionChart');
-        const ctxProjection = projectionCanvas.getContext('2d');
-        ctxProjection.clearRect(0, 0, projectionCanvas.width, projectionCanvas.height);
-        ctxProjection.font = "16px Arial";
-        ctxProjection.textAlign = "center";
-        ctxProjection.fillStyle = "#666";
-        ctxProjection.fillText("Sem dados para exibir a projeção.", projectionCanvas.width / 2, projectionCanvas.height / 2);
-        return;
-    }
-
-    const labels = aggregated.map(item => item.date); // Usar a chave ISO para o eixo de tempo
-    const revenueData = aggregated.map(item => item.revenue);
-    const unitsData = aggregated.map(item => item.units);
-
-    const projectionMetric = document.getElementById('projectionMetric').value;
-    const historicalMetricData = projectionMetric === 'revenue' ? revenueData : unitsData;
-    const historicalMetricLabel = projectionMetric === 'revenue' ? 'Receita (R$)' : 'Unidades';
-    const historicalMetricFormat = projectionMetric === 'revenue' ? formatCurrency : formatNumber;
-
-    // Destruir gráficos existentes se houver
-    if (historicalChart) historicalChart.destroy();
-    if (projectionChart) projectionChart.destroy();
-
-    const historicalCanvas = document.getElementById('historicalChart');
-    const ctxHistorical = historicalCanvas.getContext('2d');
-    historicalChart = new Chart(ctxHistorical, {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: historicalMetricLabel,
-                data: historicalMetricData,
-                backgroundColor: 'rgba(0, 72, 72, 0.6)',
-                borderColor: 'rgb(0, 72, 72)',
-                borderWidth: 1
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                x: {
-                    type: 'time',
-                    time: {
-                        unit: period === 'daily' ? 'day' : (period === 'weekly' ? 'week' : 'month'),
-                        tooltipFormat: period === 'daily' ? 'dd/MM/yyyy' : (period === 'weekly' ? 'dd/MM/yyyy' : 'MM/yyyy'),
-                        displayFormats: {
-                            day: 'dd/MM',
-                            week: 'dd/MM',
-                            month: 'MM/yyyy'
-                        }
-                    },
-                    title: {
-                        display: true,
-                        text: 'Período'
-                    }
-                },
-                y: {
-                    beginAtZero: true,
-                    title: {
-                        display: true,
-                        text: historicalMetricLabel
-                    },
-                    ticks: {
-                        callback: function(value) {
-                            return historicalMetricFormat(value);
-                        }
-                    }
-                }
-            },
-            plugins: {
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            let label = context.dataset.label || '';
-                            if (label) {
-                                label += ': ';
-                            }
-                            if (context.parsed.y !== null) {
-                                label += historicalMetricFormat(context.parsed.y);
-                            }
-                            return label;
-                        }
-                    }
-                }
-            }
-        }
-    });
-
-    // Projeção (usando uma projeção linear simples para demonstração)
-    const projectionLabels = [];
-    const projectionData = [];
-    const numFuturePeriods = 3; // Projetar para 3 períodos futuros
-
-    if (aggregated.length > 0) {
-        const lastDate = new Date(aggregated[aggregated.length - 1].date);
-        const lastValue = historicalMetricData[historicalMetricData.length - 1];
-
-        // Projeção linear simples: assume que o próximo valor é igual ao último
-        for (let i = 1; i <= numFuturePeriods; i++) {
-            let nextDate = new Date(lastDate);
-            if (period === 'daily') {
-                nextDate.setDate(lastDate.getDate() + i);
-                projectionLabels.push(nextDate.toISOString().split('T')[0]);
-            } else if (period === 'weekly') {
-                nextDate.setDate(lastDate.getDate() + (i * 7));
-                projectionLabels.push(nextDate.toISOString().split('T')[0]);
-            } else if (period === 'monthly') {
-                nextDate.setMonth(lastDate.getMonth() + i);
-                projectionLabels.push(`${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, '0')}`);
-            }
-            projectionData.push(lastValue); // Mantém o último valor para projeção simples
-        }
-    }
-
-    const projectionCanvas = document.getElementById('projectionChart');
-    const ctxProjection = projectionCanvas.getContext('2d');
-    projectionChart = new Chart(ctxProjection, {
-        type: 'line',
-        data: {
-            labels: [...labels, ...projectionLabels], // Combina labels históricos e de projeção
-            datasets: [{
-                label: historicalMetricLabel + ' (Histórico)',
-                data: historicalMetricData,
-                borderColor: 'rgb(0, 72, 72)',
-                backgroundColor: 'rgba(0, 72, 72, 0.2)',
-                fill: false,
-                tension: 0.1
-            }, {
-                label: historicalMetricLabel + ' (Projeção)',
-                data: Array(labels.length - 1).fill(null).concat([historicalMetricData[historicalMetricData.length - 1]], projectionData),
-                borderColor: 'rgb(255, 99, 132)',
-                backgroundColor: 'rgba(255, 99, 132, 0.2)',
-                borderDash: [5, 5],
-                fill: false,
-                tension: 0.1
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                x: {
-                    type: 'time',
-                    time: {
-                        unit: period === 'daily' ? 'day' : (period === 'weekly' ? 'week' : 'month'),
-                        tooltipFormat: period === 'daily' ? 'dd/MM/yyyy' : (period === 'weekly' ? 'dd/MM/yyyy' : 'MM/yyyy'),
-                        displayFormats: {
-                            day: 'dd/MM',
-                            week: 'dd/MM',
-                            month: 'MM/yyyy'
-                        }
-                    },
-                    title: {
-                        display: true,
-                        text: 'Período'
-                    }
-                },
-                y: {
-                    beginAtZero: true,
-                    title: {
-                        display: true,
-                        text: historicalMetricLabel
-                    },
-                    ticks: {
-                        callback: function(value) {
-                            return historicalMetricFormat(value);
-                        }
-                    }
-                }
-            },
-            plugins: {
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            let label = context.dataset.label || '';
-                            if (label) {
-                                label += ': ';
-                            }
-                            if (context.parsed.y !== null) {
-                                label += historicalMetricFormat(context.parsed.y);
-                            }
-                            return label;
-                        }
-                    }
-                }
-            }
-        }
-    });
+    document.getElementById('totalUnits').textContent = formatNumber(totalUnits); // Adicionado para unidades
 }
 
 function updateTable(data) {
@@ -515,24 +201,10 @@ function updateTable(data) {
     tableBody.innerHTML = ''; // Limpa a tabela
 
     // Limita a exibição a um número razoável de linhas para evitar sobrecarga
-    const displayData = data.slice(0, 500);
+    const displayLimit = 500;
+    const dataToDisplay = data.slice(0, displayLimit);
 
-    // Atualiza o cabeçalho da tabela dinamicamente para o modo diário
-    const tableHeadRow = document.getElementById('salesTable').querySelector('thead tr');
-    if (tableHeadRow) {
-        tableHeadRow.innerHTML = `
-            <th>Data</th>
-            <th>Medicamento</th>
-            <th>Categoria</th>
-            <th>Quantidade</th>
-            <th>Preço Unitário</th>
-            <th>Preço Total</th>
-            <th>Cidade</th>
-            <th>Vendedor</th>
-        `;
-    }
-
-    displayData.forEach(item => {
+    dataToDisplay.forEach(item => {
         const row = tableBody.insertRow();
         row.insertCell().textContent = item['Data'].toLocaleDateString('pt-BR');
         row.insertCell().textContent = item['Medicamento'];
@@ -544,31 +216,10 @@ function updateTable(data) {
         row.insertCell().textContent = item['Vendedor'];
     });
 
-    document.getElementById('tableTitle').textContent = `📋 Detalhamento Diário (Máximo ${displayData.length} linhas)`;
+    if (data.length > displayLimit) {
+        console.warn(`Exibindo apenas as primeiras ${displayLimit} linhas. Total de registros: ${data.length}`);
+    }
 }
 
-// Event Listeners
-document.addEventListener('DOMContentLoaded', () => {
-    loadCSV();
-
-    // Event listeners para os filtros
-    document.getElementById('filterCidade').addEventListener('change', () => {
-        applyFilters();
-        updateDependentFilters(); // Garante que os filtros dependentes sejam atualizados
-    });
-    document.getElementById('filterCategoria').addEventListener('change', () => {
-        applyFilters();
-        updateDependentFilters();
-    });
-    document.getElementById('filterMedicamento').addEventListener('change', () => {
-        applyFilters();
-        updateDependentFilters();
-    });
-    document.getElementById('filterVendedor').addEventListener('change', () => {
-        applyFilters();
-        updateDependentFilters();
-    });
-    document.getElementById('filterPeriodo').addEventListener('change', applyFilters);
-    document.getElementById('projectionMetric').addEventListener('change', applyFilters); // Event listener para a métrica da projeção
-    document.getElementById('clearBtn').addEventListener('click', clearFilters);
-});
+// Inicializa o carregamento do CSV quando a página é carregada
+document.addEventListener('DOMContentLoaded', loadCSV);
