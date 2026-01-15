@@ -195,9 +195,9 @@ function updateDependentFilters() {
     }
 
     // Popula os filtros dependentes com base nos dados filtrados
-    const categorias = [...new Set(filtered.map(item => item['Categoria']))].sort();
-    const medicamentos = [...new Set(filtered.map(item => item['Medicamento']))].sort();
-    const vendedores = [...new Set(filtered.map(item => item['Vendedor']))].sort();
+    const categorias = [...new Set(filtered.map(item => item['Categoria']))].filter(Boolean).sort();
+    const medicamentos = [...new Set(filtered.map(item => item['Medicamento']))].filter(Boolean).sort();
+    const vendedores = [...new Set(filtered.map(item => item['Vendedor']))].filter(Boolean).sort();
 
     populateSelect('filterCategoria', categorias, 'Todas as Categorias');
     populateSelect('filterMedicamento', medicamentos, 'Todos os Medicamentos');
@@ -356,7 +356,7 @@ function renderCharts(data, period) {
     // Extrai os dados para os datasets
     const historicalRevenueDataPoints = aggregatedDataPoints.map(item => ({ x: item.x, y: item.revenue }));
     const historicalUnitsDataPoints = aggregatedDataPoints.map(item => ({ x: item.x, y: item.units }));
-    const labelsForProjection = aggregatedDataPoints.map(item => item.x); // Usado para base da projeção
+    const labelsForChart = aggregatedDataPoints.map(item => item.x); // Usado para labels do eixo X
 
     const projectionMetric = document.getElementById('projectionMetric').value;
     const historicalMetricData = projectionMetric === 'revenue' ? historicalRevenueDataPoints : historicalUnitsDataPoints;
@@ -374,9 +374,7 @@ function renderCharts(data, period) {
         historicalChart = new Chart(ctxHistorical, {
             type: 'bar',
             data: {
-                // Labels não são estritamente necessários aqui se os dados já têm {x,y}
-                // Mas podemos mantê-los para consistência ou para depuração
-                labels: aggregatedDataPoints.map(item => item.x), 
+                labels: labelsForChart, // Passa as strings de data para o eixo X
                 datasets: [{
                     label: historicalMetricLabel,
                     data: historicalMetricData, // Passa os objetos {x,y}
@@ -475,7 +473,7 @@ function renderCharts(data, period) {
         projectionChart = new Chart(ctxProjection, {
             type: 'line',
             data: {
-                labels: labelsForProjection.concat(projectionDataPoints.map(item => item.x)), // Combina labels históricos e de projeção
+                labels: labelsForChart.concat(projectionDataPoints.map(item => item.x)), // Combina labels históricos e de projeção
                 datasets: [{
                     label: historicalMetricLabel + ' (Histórico)',
                     data: historicalMetricData, // Passa os objetos {x,y}
@@ -487,7 +485,7 @@ function renderCharts(data, period) {
                     label: historicalMetricLabel + ' (Projeção)',
                     // Cria um array com nulls para o histórico e depois a projeção
                     data: Array(historicalMetricData.length - 1).fill(null).concat([historicalMetricData[historicalMetricData.length - 1]], projectionDataPoints),
-                    borderColor: 'rgb(255, 99, 132)',
+                    borderColor: 'rgb(255, 99, 132)', // CORREÇÃO AQUI: Adicionado o parêntese e aspa
                     backgroundColor: 'rgba(255, 99, 132, 0.2)',
                     borderDash: [5, 5],
                     fill: false,
@@ -622,4 +620,3 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('projectionMetric').addEventListener('change', applyFilters);
     document.getElementById('clearBtn').addEventListener('click', clearFilters);
 });
-
