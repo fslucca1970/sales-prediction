@@ -33,7 +33,7 @@ function parseCSV(csv) {
         const separator = firstLine.includes('\t') ? '\t' : ',';
 
         const headers = lines[0].split(separator).map(h => h.trim().replace(/"/g, ''));
-        console.log("Cabeçalhos do CSV lidos:", headers); // Log para verificar os cabeçalhos lidos
+        console.log("Cabeçalhos do CSV lidos:", headers);
 
         allData = [];
 
@@ -62,7 +62,7 @@ function parseCSV(csv) {
         console.log("Dados carregados (allData):", allData);
         console.log("Total de registros:", allData.length);
         if (allData.length > 0) {
-            console.log("Primeira linha de dados (objeto):", allData[0]); // Log para verificar o objeto da primeira linha
+            console.log("Primeira linha de dados (objeto):", allData[0]);
         }
 
         if (allData.length === 0) {
@@ -135,24 +135,18 @@ function updateStats(data) {
 
     document.getElementById('totalSales').textContent = totalSales;
     document.getElementById('totalRevenue').textContent = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalRevenue);
-    document.getElementById('averageTicket').textContent = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(averageTicket);
+    document.getElementById('avgTicket').textContent = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(averageTicket); // ID CORRIGIDO AQUI
     document.getElementById('topProduct').textContent = topProduct;
 }
 
 // Renderizar tabela
 function renderTable(data) {
-    const tableBody = document.getElementById('salesTableBody');
+    const tableBody = document.getElementById('salesTableBody'); // ID CORRIGIDO AQUI
     if (!tableBody) {
         console.error("Elemento 'salesTableBody' não encontrado.");
         return;
     }
     tableBody.innerHTML = ''; // Limpa a tabela antes de preencher
-
-    // Garante que a tabela seja visível
-    const tableContainer = document.getElementById('dailyDetailTable');
-    if (tableContainer) {
-        tableContainer.classList.remove('hidden');
-    }
 
     const recordsToShow = Math.min(data.length, 50); // Limita a 50 registros ou menos se houver menos dados
     for (let i = 0; i < recordsToShow; i++) {
@@ -162,77 +156,82 @@ function renderTable(data) {
             <td>${row.Data || ''}</td>
             <td>${row.Medicamento || ''}</td>
             <td>${row.Categoria || ''}</td>
-            <td>${row.Quantidade || 0}</td> <!-- NOVO: Coluna Quantidade -->
-            <td>${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(row.PreçoUnitario || 0)}</td> <!-- Preço Unitário -->
-            <td>${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(row['Preço Total'] || 0)}</td> <!-- NOVO: Preço Total -->
+            <td>${row.Quantidade || 0}</td>
+            <td>${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(row.PreçoUnitario || 0)}</td>
+            <td>${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(row['Preço Total'] || 0)}</td>
             <td>${row.Cidade || ''}</td>
             <td>${row.Vendedor || ''}</td>
         `;
         tableBody.appendChild(tr);
     }
     console.log(`Tabela 'Detalhamento Diário' preenchida com ${recordsToShow} registros.`);
+    console.log("Conteúdo do tbody após preenchimento:", tableBody.innerHTML);
 }
 
 // Renderizar gráficos
 function renderCharts(data) {
-    const salesByDate = data.reduce((acc, row) => {
+    // Destrói gráficos existentes para evitar sobreposição
+    if (historicalChart) {
+        historicalChart.destroy();
+        historicalChart = null;
+    }
+    if (projectionChart) {
+        projectionChart.destroy();
+        projectionChart = null;
+    }
+
+    if (data.length === 0) {
+        // Se não há dados, os gráficos ficam vazios
+        return;
+    }
+
+    // Agrupa vendas por Data
+    const salesByDate = {};
+    data.forEach(row => {
         const date = row.Data;
         // --- ALTERADO: Usar 'Preço Total' para o valor da venda ---
         const value = row['Preço Total'] || 0;
-        acc[date] = (acc[date] || 0) + value;
-        return acc;
-    }, {});
+        if (date) {
+            salesByDate[date] = (salesByDate[date] || 0) + value;
+        }
+    });
 
+    // Ordena as datas
     const sortedDates = Object.keys(salesByDate).sort();
-    const chartLabels = sortedDates;
-    const chartData = sortedDates.map(date => salesByDate[date]);
+    const salesValues = sortedDates.map(date => salesByDate[date]);
 
-    // Histórico de Vendas
-    const historicalCtx = document.getElementById('historicalSalesChart').getContext('2d');
-    if (historicalChart) {
-        historicalChart.destroy();
-    }
-    historicalChart = new Chart(historicalCtx, {
-        type: 'line',
-        data: {
-            labels: chartLabels,
-            datasets: [{
-                label: 'Vendas Diárias (R$)',
-                data: chartData,
-                borderColor: 'rgb(0, 72, 72)', // Cor da linha
-                backgroundColor: 'rgba(0, 72, 72, 0.2)', // Cor da área abaixo da linha
-                tension: 0.1,
-                fill: true
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                x: {
-                    type: 'time',
-                    time: {
-                        unit: 'day',
-                        tooltipFormat: 'DD/MM/YYYY',
-                        displayFormats: {
-                            day: 'DD/MM'
+    // Gráfico de histórico
+    const historicalCtx = document.getElementById('historicalChart');
+    if (historicalCtx) {
+        historicalChart = new Chart(historicalCtx, {
+            type: 'line',
+            data: {
+                labels: sortedDates,
+                datasets: [{
+                    label: 'Vendas Diárias (R$)', // Rótulo atualizado
+                    data: salesValues,
+                    borderColor: 'rgb(0, 72, 18)',
+                    backgroundColor: 'rgba(0, 72, 18, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: { legend: { position: 'top' } },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { 
+                            stepSize: 1,
+                            callback: function(value) { // Formatação para moeda
+                                return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+                            }
                         }
-                    },
-                    title: {
-                        display: true,
-                        text: 'Data'
                     }
                 },
-                y: {
-                    beginAtZero: true,
-                    title: {
-                        display: true,
-                        text: 'Receita (R$)'
-                    }
-                }
-            },
-            plugins: {
-                tooltip: {
+                tooltip: { // Formatação do tooltip
                     callbacks: {
                         label: function(context) {
                             let label = context.dataset.label || '';
@@ -247,162 +246,181 @@ function renderCharts(data) {
                     }
                 }
             }
-        }
-    });
-
-    // Projeção de Vendas (Exemplo simples: média dos últimos 7 dias)
-    const last7DaysData = chartData.slice(-7);
-    const averageLast7Days = last7DaysData.length > 0 ? last7DaysData.reduce((a, b) => a + b, 0) / last7DaysData.length : 0;
-
-    const projectionLabels = [];
-    const projectionValues = [];
-    let currentDate = new Date(sortedDates[sortedDates.length - 1]);
-    for (let i = 1; i <= 7; i++) {
-        currentDate.setDate(currentDate.getDate() + 1);
-        projectionLabels.push(currentDate.toISOString().split('T')[0]);
-        projectionValues.push(averageLast7Days); // Projeção simples: mantém a média
-    }
-
-    const projectionCtx = document.getElementById('projectionChart').getContext('2d');
-    if (projectionChart) {
-        projectionChart.destroy();
-    }
-    projectionChart = new Chart(projectionCtx, {
-        type: 'line',
-        data: {
-            labels: projectionLabels,
-            datasets: [{
-                label: 'Projeção Diária (R$)',
-                data: projectionValues,
-                borderColor: 'rgb(0, 72, 72)', // Cor da linha
-                backgroundColor: 'rgba(0, 72, 72, 0.2)', // Cor da área abaixo da linha
-                tension: 0.1,
-                fill: true
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                x: {
-                    type: 'time',
-                    time: {
-                        unit: 'day',
-                        tooltipFormat: 'DD/MM/YYYY',
-                        displayFormats: {
-                            day: 'DD/MM'
-                        }
-                    },
-                    title: {
-                        display: true,
-                        text: 'Data'
-                    }
-                },
-                y: {
-                    beginAtZero: true,
-                    title: {
-                        display: true,
-                        text: 'Receita (R$)'
-                    }
-                }
-            },
-            plugins: {
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            let label = context.dataset.label || '';
-                            if (label) {
-                                label += ': ';
-                            }
-                            if (context.parsed.y !== null) {
-                                label += new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(context.parsed.y);
-                            }
-                            return label;
-                        }
-                    }
-                }
-            }
-        }
-    });
-}
-
-// Atualizar data atual no dashboard
-function updateCurrentDate() {
-    const today = new Date();
-    const options = { year: 'numeric', month: 'long', day: 'numeric' };
-    document.getElementById('currentDate').textContent = today.toLocaleDateString('pt-BR', options);
-}
-
-// Popular dropdown de filtro
-function populateFilterDropdown(filterType) {
-    const filterValueDropdown = document.getElementById('filterValue');
-    if (!filterValueDropdown) {
-        console.error("Elemento 'filterValue' não encontrado.");
-        return;
-    }
-    filterValueDropdown.innerHTML = '<option value="">Selecione...</option>'; // Opção padrão
-    filterValueDropdown.classList.remove('hidden'); // Garante que o dropdown esteja visível
-
-    let uniqueValues = new Set();
-    let field = '';
-
-    switch (filterType) {
-        case 'all':
-            filterValueDropdown.classList.add('hidden'); // Esconde se for 'Todos'
-            updateDashboard(allData); // Reseta o dashboard
-            return;
-        case 'medicamento':
-            field = 'Medicamento';
-            break;
-        case 'cidade':
-            field = 'Cidade';
-            break;
-        case 'categoria':
-            field = 'Categoria';
-            break;
-        case 'vendedor':
-            field = 'Vendedor';
-            break;
-        default:
-            console.warn('Tipo de filtro desconhecido:', filterType);
-            filterValueDropdown.classList.add('hidden');
-            return;
-    }
-
-    allData.forEach(row => {
-        if (row[field]) {
-            uniqueValues.add(row[field]);
-        }
-    });
-
-    Array.from(uniqueValues).sort().forEach(value => {
-        const option = document.createElement('option');
-        option.value = value;
-        option.textContent = value;
-        filterValueDropdown.appendChild(option);
-    });
-    console.log(`Dropdown de filtro '${filterType}' populado com ${uniqueValues.size} valores únicos.`);
-}
-
-// Event Listeners
-document.addEventListener('DOMContentLoaded', () => {
-    console.log('DOM carregado. Iniciando carregamento do CSV...');
-    loadCSV();
-
-    const filterTypeElement = document.getElementById('filterType');
-    if (filterTypeElement) {
-        filterTypeElement.addEventListener('change', (event) => {
-            populateFilterDropdown(event.target.value);
         });
     }
 
-    const filterValueElement = document.getElementById('filterValue');
-    if (filterValueElement) {
-        filterValueElement.addEventListener('change', (event) => {
-            const filterType = document.getElementById('filterType').value;
-            const filterValue = event.target.value;
+    // Gráfico de projeção (média móvel simples dos últimos 7 dias)
+    const projectionCtx = document.getElementById('projectionChart');
+    if (projectionCtx && salesValues.length > 0) {
+        const projectionLabels = [];
+        const projectionData = [];
+        const numDays = salesValues.length;
 
-            if (!filterValue) { // Se "Selecione..." for escolhido, volta para todos os dados
+        // Calcula a média móvel dos últimos 7 dias para projeção
+        for (let i = 0; i < numDays; i++) {
+            if (i >= 6) { // Precisa de pelo menos 7 dias para calcular a primeira média
+                const last7Days = salesValues.slice(i - 6, i + 1);
+                const sum = last7Days.reduce((a, b) => a + b, 0);
+                projectionData.push(sum / last7Days.length);
+                projectionLabels.push(sortedDates[i]);
+            } else {
+                // Para os primeiros dias, a projeção pode ser a própria venda diária ou 0
+                projectionData.push(salesValues[i]); 
+                projectionLabels.push(sortedDates[i]);
+            }
+        }
+
+        // Adiciona 3 dias de projeção futura baseada na última média
+        if (projectionData.length > 0) {
+            const lastAvg = projectionData[projectionData.length - 1];
+            const lastDate = new Date(sortedDates[sortedDates.length - 1]);
+            for (let i = 1; i <= 3; i++) {
+                const nextDate = new Date(lastDate);
+                nextDate.setDate(lastDate.getDate() + i);
+                projectionLabels.push(nextDate.toISOString().split('T')[0]);
+                projectionData.push(lastAvg); // Projeta a última média
+            }
+        }
+
+        projectionChart = new Chart(projectionCtx, {
+            type: 'bar',
+            data: {
+                labels: projectionLabels,
+                datasets: [{
+                    label: 'Projeção de Vendas (R$)', // Rótulo atualizado
+                    data: projectionData,
+                    backgroundColor: 'rgba(0, 72, 18, 0.6)',
+                    borderColor: 'rgb(0, 72, 18)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: { legend: { position: 'top' } },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { 
+                            stepSize: 1,
+                            callback: function(value) { // Formatação para moeda
+                                return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+                            }
+                        }
+                    }
+                },
+                tooltip: { // Formatação do tooltip
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed.y !== null) {
+                                label += new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(context.parsed.y);
+                            }
+                            return label;
+                        }
+                    }
+                }
+            }
+        });
+    }
+}
+
+// Preencher dropdown de filtro dinamicamente
+function populateFilterDropdown(filterType) {
+    const dropdown = document.getElementById('filterValue');
+    if (!dropdown) {
+        console.error('Elemento filterValue não encontrado.');
+        return;
+    }
+
+    dropdown.innerHTML = '<option value="">Escolha uma opção...</option>'; // Limpa e adiciona opção padrão
+
+    if (filterType === 'all') {
+        dropdown.classList.add('hidden');
+        console.log("Dropdown 'Selecione:' está oculto (filterType é 'all').");
+        return;
+    }
+
+    dropdown.classList.remove('hidden'); // Garante que o dropdown esteja visível
+    console.log("Dropdown 'Selecione:' está visível (classe 'hidden' removida).");
+
+    let fieldName = '';
+
+    switch (filterType) {
+        case 'medicamento':
+            fieldName = 'Medicamento';
+            break;
+        case 'cidade':
+            fieldName = 'Cidade';
+            break;
+        case 'categoria':
+            fieldName = 'Categoria';
+            break;
+        case 'vendedor':
+            fieldName = 'Vendedor';
+            break;
+        default:
+            dropdown.classList.add('hidden');
+            console.warn('Tipo de filtro desconhecido:', filterType);
+            return;
+    }
+
+    const uniqueValues = new Set();
+    allData.forEach(row => {
+        if (row[fieldName]) {
+            uniqueValues.add(row[fieldName]);
+        }
+    });
+
+    const sortedValues = Array.from(uniqueValues).sort();
+    sortedValues.forEach(value => {
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = value;
+        dropdown.appendChild(option);
+    });
+    console.log(`Dropdown '${filterType}' preenchido com ${sortedValues.length} opções.`);
+}
+
+// Atualizar data
+function updateCurrentDate() {
+    const currentDateEl = document.getElementById('currentDate');
+    if (currentDateEl) {
+        const now = new Date();
+        currentDateEl.textContent = now.toLocaleDateString('pt-BR', {
+            day: '2-digit',
+            month: 'long',
+            year: 'numeric'
+        });
+    }
+}
+
+// Inicialização - TODOS os Event Listeners dentro do DOMContentLoaded
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('DOM carregado. Iniciando carregamento do CSV...');
+
+    loadCSV(); // Inicia o carregamento do CSV
+
+    const filterTypeEl = document.getElementById('filterType');
+    if (filterTypeEl) {
+        filterTypeEl.addEventListener('change', (e) => {
+            console.log('Filtro alterado para:', e.target.value);
+            populateFilterDropdown(e.target.value);
+        });
+    }
+
+    const filterBtn = document.getElementById('filterBtn');
+    if (filterBtn) {
+        filterBtn.addEventListener('click', () => {
+            const filterType = document.getElementById('filterType').value;
+            const filterValue = document.getElementById('filterValue').value;
+
+            console.log('Filtro clicado:', filterType, filterValue);
+
+            if (filterType === 'all' || !filterValue) {
                 updateDashboard(allData);
                 return;
             }
@@ -422,7 +440,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     field = 'Vendedor';
                     break;
                 default:
-                    console.warn('Tipo de filtro desconhecido para aplicação:', filterType);
+                    console.warn('Tipo de filtro desconhecido:', filterType);
                     return;
             }
 
