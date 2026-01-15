@@ -98,24 +98,29 @@ function parseCSV(csv) {
             row['ParsedDate'] = parsedDate;
 
             // Converte valores numéricos, tratando vírgula como separador decimal
-            row['Quantidade'] = parseFloat(row['Quantidade'].replace('.', '').replace(',', '.'));
-            row['Preço Unitário'] = parseFloat(row['Preço Unitário'].replace('.', '').replace(',', '.'));
-            row['Preço Total'] = parseFloat(row['Preço Total'].replace('.', '').replace(',', '.'));
+            // Garante que os campos existam antes de tentar replace
+            let quantidadeRaw = row['Quantidade'] ? row['Quantidade'].replace('.', '').replace(',', '.') : '0';
+            let precoUnitarioRaw = row['Preço Unitário'] ? row['Preço Unitário'].replace('R$', '').replace('.', '').replace(',', '.') : '0';
+            let precoTotalRaw = row['Preço Total'] ? row['Preço Total'].replace('R$', '').replace('.', '').replace(',', '.') : '0';
+
+            row['Quantidade'] = parseFloat(quantidadeRaw);
+            row['Preço Unitário'] = parseFloat(precoUnitarioRaw);
+            row['Preço Total'] = parseFloat(precoTotalRaw);
 
             if (isNaN(row['Quantidade'])) {
-                console.warn(`Linha ${i + 1} ignorada (quantidade): Quantidade inválida: '${values[headers.indexOf('Quantidade')]}'. Linha: "${lines[i]}"`);
+                console.warn(`Linha ${i + 1} (quantidade): Quantidade inválida: '${quantidadeRaw}'. Usando 0.`);
                 invalidQuantityCount++;
-                continue;
+                row['Quantidade'] = 0;
             }
             if (isNaN(row['Preço Unitário'])) {
-                console.warn(`Linha ${i + 1} ignorada (preço unitário): Preço unitário inválido: '${values[headers.indexOf('Preço Unitário')]}'. Linha: "${lines[i]}"`);
+                console.warn(`Linha ${i + 1} (preço unitário): Preço unitário inválido: '${precoUnitarioRaw}'. Usando 0.`);
                 invalidPriceCount++;
-                continue;
+                row['Preço Unitário'] = 0;
             }
             if (isNaN(row['Preço Total'])) {
-                console.warn(`Linha ${i + 1} ignorada (preço total): Preço total inválido: '${values[headers.indexOf('Preço Total')]}'. Linha: "${lines[i]}"`);
+                console.warn(`Linha ${i + 1} (preço total): Preço total inválido: '${precoTotalRaw}'. Usando 0.`);
                 invalidPriceCount++;
-                continue;
+                row['Preço Total'] = 0;
             }
 
             allData.push(row);
@@ -123,8 +128,8 @@ function parseCSV(csv) {
 
         console.log(`CSV carregado com sucesso: ${allData.length} registros válidos.`);
         if (invalidDateCount > 0) console.warn(`${invalidDateCount} linhas ignoradas devido a datas inválidas.`);
-        if (invalidPriceCount > 0) console.warn(`${invalidPriceCount} linhas ignoradas devido a preços inválidos.`);
-        if (invalidQuantityCount > 0) console.warn(`${invalidQuantityCount} linhas ignoradas devido a quantidades inválidas.`);
+        if (invalidPriceCount > 0) console.warn(`${invalidPriceCount} preços inválidos foram definidos como 0.`);
+        if (invalidQuantityCount > 0) console.warn(`${invalidQuantityCount} quantidades inválidas foram definidas como 0.`);
         if (columnMismatchCount > 0) console.warn(`${columnMismatchCount} linhas ignoradas devido a número incorreto de colunas.`);
 
         if (allData.length === 0) {
@@ -156,6 +161,7 @@ function populateSelect(elementId, values, defaultOptionText) {
         console.error(`Elemento com ID '${elementId}' não encontrado.`);
         return;
     }
+    const currentSelection = select.value;
     select.innerHTML = `<option value="all">${defaultOptionText}</option>`;
     values.forEach(value => {
         const option = document.createElement('option');
@@ -163,7 +169,12 @@ function populateSelect(elementId, values, defaultOptionText) {
         option.textContent = value;
         select.appendChild(option);
     });
-    select.disabled = values.length === 0; // Desabilita se não houver opções
+    if (values.includes(currentSelection) || currentSelection === 'all') {
+        select.value = currentSelection;
+    } else {
+        select.value = 'all';
+    }
+    select.disabled = values.length === 0;
 }
 
 function initializeFilters() {
@@ -205,9 +216,9 @@ function clearFilters() {
     document.getElementById('filterCategoria').value = 'all';
     document.getElementById('filterMedicamento').value = 'all';
     document.getElementById('filterVendedor').value = 'all';
-    document.getElementById('filterPeriodo').value = 'daily'; // Volta para diário
-    document.getElementById('projectionMetric').value = 'revenue'; // Volta para receita
-    updateDependentFilters(); // Re-popula os filtros dependentes com base em 'allData'
+    document.getElementById('filterPeriodo').value = 'daily';
+    document.getElementById('projectionMetric').value = 'revenue';
+    updateDependentFilters();
     applyFilters();
 }
 
@@ -225,35 +236,8 @@ function updateStats(data) {
 
     document.getElementById('totalSales').textContent = formatNumber(totalSales);
     document.getElementById('totalRevenue').textContent = formatCurrency(totalRevenue);
-    document.getElementById('averageTicket').textContent = formatCurrency(averageTicket);
+    document.getElementById('avgTicket').textContent = formatCurrency(averageTicket); // Corrigido ID
     document.getElementById('topProduct').textContent = topProduct;
-}
-
-function renderSalesTable(data) {
-    const tableBody = document.getElementById('salesTableBody');
-    if (!tableBody) {
-        console.error("Elemento 'salesTableBody' não encontrado.");
-        return;
-    }
-    tableBody.innerHTML = '';
-
-    // Limita a 500 linhas
-    const displayData = data.slice(0, 500);
-
-    displayData.forEach(row => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td>${row['Data']}</td>
-            <td>${row['Medicamento']}</td>
-            <td>${row['Categoria']}</td>
-            <td>${formatNumber(row['Quantidade'])}</td>
-            <td>${formatCurrency(row['Preço Unitário'])}</td>
-            <td>${formatCurrency(row['Preço Total'])}</td>
-            <td>${row['Cidade']}</td>
-            <td>${row['Vendedor']}</td>
-        `;
-        tableBody.appendChild(tr);
-    });
 }
 
 function aggregateDataByPeriod(data, period) {
@@ -278,17 +262,22 @@ function aggregateDataByPeriod(data, period) {
         if (!grouped[key]) {
             grouped[key] = {
                 date: key,
-                revenue: 0,
-                units: 0,
-                originalRows: [] // Para manter os dados brutos se necessário
+                periodoDisplay: (period === 'daily' ? date.toLocaleDateString('pt-BR') : 
+                                 period === 'weekly' ? `Semana de ${new Date(key).toLocaleDateString('pt-BR')}` :
+                                 new Date(key + '-01').toLocaleDateString(),
+                vendedores: new Set(),
+                originalRows: []
             };
         }
         grouped[key].revenue += row['Preço Total'];
         grouped[key].units += row['Quantidade'];
+        grouped[key].medicamentos.add(row['Medicamento']);
+        grouped[key].categorias.add(row['Categoria']);
+        grouped[key].cidades.add(row['Cidade']);
+        grouped[key].vendedores.add(row['Vendedor']);
         grouped[key].originalRows.push(row);
     });
 
-    // Converte para array e ordena por data
     const aggregatedArray = Object.values(grouped).sort((a, b) => new Date(a.date) - new Date(b.date));
     return aggregatedArray;
 }
@@ -296,31 +285,34 @@ function aggregateDataByPeriod(data, period) {
 function renderCharts(data, period) {
     const aggregatedData = aggregateDataByPeriod(data, period);
 
-    const labels = aggregatedData.map(item => item.date);
+    const labels = aggregatedData.map(item => item.periodoDisplay); // Usar periodoDisplay para os rótulos
     const historicalRevenueValues = aggregatedData.map(item => item.revenue);
     const historicalUnitsValues = aggregatedData.map(item => item.units);
 
-    // Depuração: Verificar os dados antes de passar para o Chart.js
-    console.log("Labels para gráficos:", labels);
+    console.log("Labels para gráficos (Histórico):", labels);
     console.log("Valores de Receita Histórica:", historicalRevenueValues);
     console.log("Valores de Unidades Históricas:", historicalUnitsValues);
 
     // --- Histórico de Vendas ---
-    const ctxHistorical = document.getElementById('historicalSalesChart').getContext('2d');
+    const historicalCanvas = document.getElementById('historicalChart'); // Corrigido ID
+    if (!historicalCanvas) {
+        console.error("Elemento 'historicalChart' não encontrado.");
+        return;
+    }
+    const ctxHistorical = historicalCanvas.getContext('2d');
     if (historicalChart) {
         historicalChart.destroy();
     }
 
-    // Só renderiza se houver dados
     if (labels.length > 0 && historicalRevenueValues.length > 0) {
         historicalChart = new Chart(ctxHistorical, {
-            type: 'bar', // Pode ser 'line' ou 'bar'
+            type: 'bar',
             data: {
                 labels: labels,
                 datasets: [{
                     label: 'Receita (R$)',
                     data: historicalRevenueValues,
-                    backgroundColor: 'rgba(0, 72, 72, 0.6)',
+                    backgroundColor: 'rgba(0, 72, 72, 0.8)',
                     borderColor: 'rgba(0, 72, 72, 1)',
                     borderWidth: 1
                 }]
@@ -369,11 +361,21 @@ function renderCharts(data, period) {
         });
     } else {
         console.warn("Dados insuficientes para renderizar o gráfico histórico.");
+        ctxHistorical.clearRect(0, 0, historicalCanvas.width, historicalCanvas.height);
+        ctxHistorical.font = "16px Arial";
+        ctxHistorical.textAlign = "center";
+        ctxHistorical.fillStyle = "#666";
+        ctxHistorical.fillText("Sem dados para exibir o histórico.", historicalCanvas.width / 2, historicalCanvas.height / 2);
     }
 
 
     // --- Projeção de Vendas ---
-    const ctxProjection = document.getElementById('projectionSalesChart').getContext('2d');
+    const projectionCanvas = document.getElementById('projectionChart'); // ID correto
+    if (!projectionCanvas) {
+        console.error("Elemento 'projectionChart' não encontrado.");
+        return;
+    }
+    const ctxProjection = projectionCanvas.getContext('2d');
     if (projectionChart) {
         projectionChart.destroy();
     }
@@ -382,39 +384,39 @@ function renderCharts(data, period) {
     const projectionTitle = projectionMetric === 'revenue' ? 'Projeção (Receita R$)' : 'Projeção (Unidades)';
     const historicalDataForProjection = projectionMetric === 'revenue' ? historicalRevenueValues : historicalUnitsValues;
 
-    // Gerar projeção simples (ex: média dos últimos 3 pontos)
     let projectionValues = [];
     let projectionLabels = [];
 
     if (historicalDataForProjection.length > 0) {
-        const lastDataPoint = historicalDataForProjection[historicalDataForProjection.length - 1];
-        const lastLabel = labels[labels.length - 1];
-        const lastDate = new Date(lastLabel);
+        const lastDataPointValue = historicalDataForProjection[historicalDataForProjection.length - 1];
+        const lastAggregatedItem = aggregatedData[aggregatedData.length - 1];
+        const lastDate = new Date(lastAggregatedItem.date); // Usar a data do item agregado
 
-        // Projeta 3 períodos futuros
         for (let i = 1; i <= 3; i++) {
             let nextDate = new Date(lastDate);
-            let projectedValue = lastDataPoint; // Projeção simples: mantém o último valor
+            let projectedValue = lastDataPointValue; // Projeção simples: mantém o último valor
 
+            let nextLabel;
             if (period === 'daily') {
                 nextDate.setDate(lastDate.getDate() + i);
-                projectionLabels.push(nextDate.toISOString().split('T')[0]);
+                nextLabel = `+${i} dia`;
             } else if (period === 'weekly') {
                 nextDate.setDate(lastDate.getDate() + (i * 7));
-                projectionLabels.push(nextDate.toISOString().split('T')[0]);
+                nextLabel = `+${i} semana`;
             } else if (period === 'monthly') {
                 nextDate.setMonth(lastDate.getMonth() + i);
-                projectionLabels.push(`${nextDate.getFullYear()}-${(nextDate.getMonth() + 1).toString().padStart(2, '0')}`);
+                nextLabel = `+${i} mês`;
             }
-            projectionValues.push(projectedValue);
+            projectionLabels.push(nextLabel);
+            // Adiciona uma pequena variação aleatória à média para a projeção
+            projectedValue = projectedValue * (1 + (Math.random() - 0.5) * 0.1); // +/- 5% de variação
+            projectionValues.push(Math.max(0, Math.round(projectedValue)));
         }
     }
 
-    // Depuração: Verificar os dados da projeção antes de passar para o Chart.js
     console.log("Labels para Projeção:", projectionLabels);
     console.log("Valores para Projeção:", projectionValues);
 
-    // Só renderiza se houver dados de projeção
     if (projectionLabels.length > 0 && projectionValues.length > 0) {
         projectionChart = new Chart(ctxProjection, {
             type: 'line',
@@ -445,7 +447,7 @@ function renderCharts(data, period) {
                         beginAtZero: true,
                         title: {
                             display: true,
-                            text: projectionMetric === 'revenue' ? 'Receita (R$)' : 'Unidades'
+                            text: projectionMetric === 'revenue' ? 'Receita Projetada (R$)' : 'Unidades Projetadas'
                         },
                         ticks: {
                             callback: function(value) {
@@ -474,20 +476,119 @@ function renderCharts(data, period) {
         });
     } else {
         console.warn("Dados insuficientes para renderizar o gráfico de projeção.");
+        ctxProjection.clearRect(0, 0, projectionCanvas.width, projectionCanvas.height);
+        ctxProjection.font = "16px Arial";
+        ctxProjection.textAlign = "center";
+        ctxProjection.fillStyle = "#666";
+        ctxProjection.fillText("Sem dados para exibir a projeção.", projectionCanvas.width / 2, projectionCanvas.height / 2);
+    }
+}
+
+function updateTable(originalFilteredData, groupedData, period) {
+    const tableBody = document.getElementById('salesTableBody');
+    if (!tableBody) {
+        console.error("Elemento 'salesTableBody' não encontrado.");
+        return;
+    }
+    tableBody.innerHTML = '';
+
+    const tableTitle = document.getElementById('tableTitle');
+    let titleText = '📋 Detalhamento ';
+
+    let dataToDisplay = [];
+
+    if (period === 'daily') {
+        titleText += 'Diário';
+        dataToDisplay = originalFilteredData.slice(0, 500);
+    } else {
+        titleText += period === 'weekly' ? 'Semanal' : 'Mensal';
+        dataToDisplay = groupedData.map(g => ({
+            'Data': g.periodoDisplay, // Usar o display formatado
+            'Medicamento': Array.from(g.medicamentos).join(', '),
+            'Categoria': Array.from(g.categorias).join(', '),
+            'Quantidade': g.units,
+            'Preço Unitário': g.revenue / g.units || 0,
+            'Preço Total': g.revenue,
+            'Cidade': Array.from(g.cidades).join(', '),
+            'Vendedor': Array.from(g.vendedores).join(', ')
+        })).slice(0, 500);
+    }
+
+    tableTitle.textContent = `${titleText} (Máximo ${dataToDisplay.length} linhas)`;
+
+    const tableHeadRow = document.getElementById('salesTable').querySelector('thead tr');
+    if (!tableHeadRow) {
+        console.error("Elemento 'salesTable thead tr' não encontrado.");
+        return;
+    }
+    tableHeadRow.innerHTML = '';
+
+    if (period === 'daily') {
+        tableHeadRow.innerHTML = `
+            <th>Data</th>
+            <th>Medicamento</th>
+            <th>Categoria</th>
+            <th>Quantidade</th>
+            <th>Preço Unitário</th>
+            <th>Preço Total</th>
+            <th>Cidade</th>
+            <th>Vendedor</th>
+        `;
+        dataToDisplay.forEach(row => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${row['Data']}</td>
+                <td>${row['Medicamento']}</td>
+                <td>${row['Categoria']}</td>
+                <td>${formatNumber(row['Quantidade'])}</td>
+                <td>${formatCurrency(row['Preço Unitário'])}</td>
+                <td>${formatCurrency(row['Preço Total'])}</td>
+                <td>${row['Cidade']}</td>
+                <td>${row['Vendedor']}</td>
+            `;
+            tableBody.appendChild(tr);
+        });
+    } else {
+        tableHeadRow.innerHTML = `
+            <th>Período</th>
+            <th>Medicamentos Vendidos</th>
+            <th>Categorias Vendidas</th>
+            <th>Quantidade Total</th>
+            <th>Ticket Médio Período</th>
+            <th>Receita Total</th>
+            <th>Cidades</th>
+            <th>Vendedores</th>
+        `;
+        dataToDisplay.forEach(row => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${row['Data']}</td>
+                <td>${row['Medicamento']}</td>
+                <td>${row['Categoria']}</td>
+                <td>${formatNumber(row['Quantidade'])}</td>
+                <td>${formatCurrency(row['Preço Unitário'])}</td>
+                <td>${formatCurrency(row['Preço Total'])}</td>
+                <td>${row['Cidade']}</td>
+                <td>${row['Vendedor']}</td>
+            `;
+            tableBody.appendChild(tr);
+        });
     }
 }
 
 function updateLastUpdateDate() {
-    const lastUpdateSpan = document.getElementById('lastUpdateDate');
-    if (lastUpdateSpan) {
+    const lastUpdateDateElement = document.getElementById('lastUpdateDate');
+    if (lastUpdateDateElement) {
         const now = new Date();
-        lastUpdateSpan.textContent = now.toLocaleString('pt-BR', {
+        const options = {
             day: '2-digit',
-            month: '2-digit',
+            month: 'long',
             year: 'numeric',
             hour: '2-digit',
-            minute: '2-digit'
-        });
+            minute: '2-digit',
+            second: '2-digit'
+        };
+        lastUpdateDateElement.textContent = now.toLocaleDateString('pt-BR', options);
     }
 }
 
@@ -499,12 +600,10 @@ function updateDependentFilters() {
 
     let filteredForNextDropdowns = allData;
 
-    // Filtra pelos valores selecionados nos filtros anteriores
     if (selectedCidade !== 'all') {
         filteredForNextDropdowns = filteredForNextDropdowns.filter(row => row['Cidade'] === selectedCidade);
     }
     populateSelect('filterCategoria', getUniqueValues(filteredForNextDropdowns, 'Categoria'), 'Todas as Categorias');
-    // Tenta restaurar a seleção da categoria
     if (selectedCategoria !== 'all' && getUniqueValues(filteredForNextDropdowns, 'Categoria').includes(selectedCategoria)) {
         document.getElementById('filterCategoria').value = selectedCategoria;
     } else {
@@ -515,7 +614,6 @@ function updateDependentFilters() {
         filteredForNextDropdowns = filteredForNextDropdowns.filter(row => row['Categoria'] === selectedCategoria);
     }
     populateSelect('filterMedicamento', getUniqueValues(filteredForNextDropdowns, 'Medicamento'), 'Todos os Medicamentos');
-    // Tenta restaurar a seleção do medicamento
     if (selectedMedicamento !== 'all' && getUniqueValues(filteredForNextDropdowns, 'Medicamento').includes(selectedMedicamento)) {
         document.getElementById('filterMedicamento').value = selectedMedicamento;
     } else {
@@ -526,7 +624,6 @@ function updateDependentFilters() {
         filteredForNextDropdowns = filteredForNextDropdowns.filter(row => row['Medicamento'] === selectedMedicamento);
     }
     populateSelect('filterVendedor', getUniqueValues(filteredForNextDropdowns, 'Vendedor'), 'Todos os Vendedores');
-    // Tenta restaurar a seleção do vendedor
     if (selectedVendedor !== 'all' && getUniqueValues(filteredForNextDropdowns, 'Vendedor').includes(selectedVendedor)) {
         document.getElementById('filterVendedor').value = selectedVendedor;
     } else {
