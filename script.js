@@ -68,6 +68,11 @@ function parseCSV(csv) {
 function updateDashboard(data) {
     if (!data || data.length === 0) {
         console.warn('updateDashboard chamado com dados vazios');
+        // Limpa gráficos e estatísticas se não houver dados
+        updateStats([]); 
+        renderTable([]);
+        renderCharts([]);
+        updateCurrentDate();
         return;
     }
 
@@ -82,10 +87,10 @@ function updateStats(data) {
     const totalSales = data.length;
 
     const totalRevenue = data.reduce((sum, row) => {
-        if (!row.preco) return sum;
+        if (!row.Preço) return sum; // Usando 'Preço'
 
         // Remove "R$", espaços e substitui vírgula por ponto
-        const priceStr = row.preco.toString().replace('R$', '').replace(/\s/g, '').replace(',', '.');
+        const priceStr = row.Preço.toString().replace(/R\$\s*/g, '').replace(/\s/g, '').replace(',', '.');
         const price = parseFloat(priceStr);
 
         return sum + (isNaN(price) ? 0 : price);
@@ -95,8 +100,8 @@ function updateStats(data) {
 
     const products = {};
     data.forEach(row => {
-        if (row.nome_produto) {
-            products[row.nome_produto] = (products[row.nome_produto] || 0) + 1;
+        if (row.Medicamento) { // Usando 'Medicamento'
+            products[row.Medicamento] = (products[row.Medicamento] || 0) + 1;
         }
     });
 
@@ -105,8 +110,10 @@ function updateStats(data) {
         : '-';
 
     document.getElementById('totalSales').textContent = totalSales;
-    document.getElementById('totalRevenue').textContent = `R$ ${totalRevenue.toFixed(2).replace('.', ',')}`;
-    document.getElementById('avgTicket').textContent = `R$ ${avgTicket.toFixed(2).replace('.', ',')}`;
+    document.getElementById('totalRevenue').textContent = 
+        new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalRevenue);
+    document.getElementById('avgTicket').textContent = 
+        new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(avgTicket);
     document.getElementById('topProduct').textContent = topProduct;
 }
 
@@ -123,12 +130,12 @@ function renderTable(data) {
     displayData.forEach(row => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td>${row.data || '-'}</td>
-            <td>${row.nome_produto || '-'}</td>
-            <td>${row.categoria || '-'}</td>
-            <td>${row.unidade || '-'}</td>
-            <td>${row.nome_vendedor || '-'}</td>
-            <td>${row.preco || '-'}</td>
+            <td>${row.Data || '-'}</td>         <!-- CORRIGIDO: row.Data -->
+            <td>${row.Medicamento || '-'}</td>  <!-- CORRIGIDO: row.Medicamento -->
+            <td>${row.Categoria || '-'}</td>
+            <td>${row.Cidade || '-'}</td>       <!-- CORRIGIDO: row.Cidade -->
+            <td>${row.Vendedor || '-'}</td>     <!-- CORRIGIDO: row.Vendedor -->
+            <td>${row.Preço || '-'}</td>        <!-- CORRIGIDO: row.Preço -->
         `;
         tbody.appendChild(tr);
     });
@@ -136,12 +143,19 @@ function renderTable(data) {
 
 // Renderizar gráficos
 function renderCharts(data) {
-    if (data.length === 0) return;
+    // Garante que os gráficos sejam destruídos mesmo se não houver dados para renderizar
+    if (historicalChart) historicalChart.destroy();
+    if (projectionChart) projectionChart.destroy();
 
-    // Agrupa vendas por data
+    if (data.length === 0) {
+        // Se não há dados, os gráficos ficam vazios ou com uma mensagem
+        return;
+    }
+
+    // Agrupa vendas por Data (CORRIGIDO AQUI)
     const salesByDate = {};
     data.forEach(row => {
-        const date = row.data;
+        const date = row.Data; // Usando 'Data'
         if (date) {
             salesByDate[date] = (salesByDate[date] || 0) + 1;
         }
@@ -154,10 +168,6 @@ function renderCharts(data) {
     // Gráfico de histórico
     const historicalCtx = document.getElementById('historicalChart');
     if (historicalCtx) {
-        if (historicalChart) {
-            historicalChart.destroy();
-        }
-
         historicalChart = new Chart(historicalCtx, {
             type: 'line',
             data: {
@@ -181,7 +191,7 @@ function renderCharts(data) {
                     y: {
                         beginAtZero: true,
                         ticks: {
-                            stepSize: 1
+                            stepSize: 1 // Garante que os ticks sejam inteiros
                         }
                     }
                 }
@@ -192,10 +202,6 @@ function renderCharts(data) {
     // Gráfico de projeção (média móvel simples dos últimos 7 dias)
     const projectionCtx = document.getElementById('projectionChart');
     if (projectionCtx && salesValues.length > 0) {
-        if (projectionChart) {
-            projectionChart.destroy();
-        }
-
         // Calcula média dos últimos 7 dias (ou todos se menos de 7)
         const last7Days = salesValues.slice(-7);
         const avgSales = last7Days.reduce((a, b) => a + b, 0) / last7Days.length;
@@ -220,7 +226,7 @@ function renderCharts(data) {
                 datasets: [{
                     label: 'Projeção de Vendas',
                     data: projectionValues,
-                    backgroundColor: 'rgba(0, 72, 18, 0.7)',
+                    backgroundColor: 'rgba(0, 100, 30, 0.7)',
                     borderColor: 'rgb(0, 72, 18)',
                     borderWidth: 1
                 }]
@@ -235,7 +241,7 @@ function renderCharts(data) {
                     y: {
                         beginAtZero: true,
                         ticks: {
-                            stepSize: 1
+                            stepSize: 1 // Garante que os ticks sejam inteiros
                         }
                     }
                 }
@@ -262,10 +268,10 @@ function populateFilterDropdown(filterType) {
     dropdown.classList.remove('hidden');
 
     const fieldMap = {
-        'medicamento': 'nome_produto',
-        'cidade': 'unidade',
-        'categoria': 'categoria',
-        'vendedor': 'nome_vendedor'
+        'medicamento': 'Medicamento', // CORRIGIDO: 'Medicamento'
+        'cidade': 'Cidade',           // CORRIGIDO: 'Cidade'
+        'categoria': 'Categoria',
+        'vendedor': 'Vendedor'        // CORRIGIDO: 'Vendedor'
     };
 
     const field = fieldMap[filterType];
@@ -327,10 +333,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const fieldMap = {
-                'medicamento': 'nome_produto',
-                'cidade': 'unidade',
-                'categoria': 'categoria',
-                'vendedor': 'nome_vendedor'
+                'medicamento': 'Medicamento', // CORRIGIDO: 'Medicamento'
+                'cidade': 'Cidade',           // CORRIGIDO: 'Cidade'
+                'categoria': 'Categoria',
+                'vendedor': 'Vendedor'        // CORRIGIDO: 'Vendedor'
             };
 
             const field = fieldMap[filterType];
