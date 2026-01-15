@@ -31,23 +31,17 @@ function parseCSV(csv) {
         // Detecta o separador (tabulação ou vírgula)
         const firstLine = lines[0];
         const separator = firstLine.includes('\t') ? '\t' : ',';
-
         const headers = lines[0].split(separator).map(h => h.trim().replace(/"/g, ''));
-
         console.log("Cabeçalhos do CSV:", headers);
 
         allData = [];
-
         for (let i = 1; i < lines.length; i++) {
             if (!lines[i].trim()) continue;
-
             const values = lines[i].split(separator).map(v => v.trim().replace(/"/g, ''));
             const row = {};
-
             headers.forEach((header, index) => {
                 row[header] = values[index] || '';
             });
-
             allData.push(row);
         }
 
@@ -69,7 +63,7 @@ function parseCSV(csv) {
             if (filterTypeElement) {
                 populateFilterDropdown(filterTypeElement.value);
             }
-        }, 100);
+        }, 100); // Pequeno delay para garantir que o DOM esteja completamente renderizado
 
     } catch (error) {
         console.error('Erro ao fazer parsing do CSV:', error);
@@ -88,7 +82,6 @@ function updateDashboard(data) {
         updateCurrentDate();
         return;
     }
-
     updateStats(data);
     renderTable(data);
     renderCharts(data);
@@ -98,13 +91,10 @@ function updateDashboard(data) {
 // Atualizar estatísticas
 function updateStats(data) {
     const totalSales = data.length;
-
     const totalRevenue = data.reduce((sum, row) => {
         if (!row.Preço) return sum;
-
         const priceStr = row.Preço.toString().replace(/R\$\s*/g, '').replace(/\s/g, '').replace(',', '.');
         const price = parseFloat(priceStr);
-
         return sum + (isNaN(price) ? 0 : price);
     }, 0);
 
@@ -139,11 +129,8 @@ function renderTable(data) {
         console.error('Elemento tableBody não encontrado');
         return;
     }
-
     tbody.innerHTML = '';
-
     const displayData = data.slice(0, 50); // Limita a 50 linhas para performance
-
     displayData.forEach(row => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
@@ -152,7 +139,7 @@ function renderTable(data) {
             <td>${row.Categoria || '-'}</td>
             <td>${row.Cidade || '-'}</td>
             <td>${row.Vendedor || '-'}</td>
-            <td>${row.Preço || '-'}</td>
+            <td>${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(parseFloat(row.Preço.toString().replace(/R\$\s*/g, '').replace(/\s/g, '').replace(',', '.')) || 0)}</td>
         `;
         tbody.appendChild(tr);
     });
@@ -178,7 +165,7 @@ function renderCharts(data) {
     // Agrupa vendas por Data
     const salesByDate = {};
     data.forEach(row => {
-        const date = row.Data;
+        const date = row.Data; // Usando 'Data' conforme seu CSV
         if (date) {
             salesByDate[date] = (salesByDate[date] || 0) + 1;
         }
@@ -221,19 +208,34 @@ function renderCharts(data) {
     // Gráfico de projeção (média móvel simples dos últimos 7 dias)
     const projectionCtx = document.getElementById('projectionChart');
     if (projectionCtx && salesValues.length > 0) {
-        const last7Days = salesValues.slice(-7);
-        const avgSales = last7Days.reduce((a, b) => a + b, 0) / last7Days.length;
-
         const projectionLabels = [];
-        const projectionValues = [];
+        const projectionData = [];
+        const numDays = salesValues.length;
 
-        const lastDate = new Date(sortedDates[sortedDates.length - 1]);
+        // Calcula a média móvel dos últimos 7 dias para projeção
+        for (let i = 0; i < numDays; i++) {
+            if (i >= 6) { // Precisa de pelo menos 7 dias para calcular a primeira média
+                const last7Days = salesValues.slice(i - 6, i + 1);
+                const sum = last7Days.reduce((a, b) => a + b, 0);
+                projectionData.push(sum / last7Days.length);
+                projectionLabels.push(sortedDates[i]);
+            } else {
+                // Para os primeiros dias, a projeção pode ser a própria venda diária ou 0
+                projectionData.push(salesValues[i]); 
+                projectionLabels.push(sortedDates[i]);
+            }
+        }
 
-        for (let i = 1; i <= 7; i++) {
-            const nextDate = new Date(lastDate);
-            nextDate.setDate(lastDate.getDate() + i);
-            projectionLabels.push(nextDate.toLocaleDateString('pt-BR'));
-            projectionValues.push(Math.round(avgSales));
+        // Adiciona 3 dias de projeção futura baseada na última média
+        if (projectionData.length > 0) {
+            const lastAvg = projectionData[projectionData.length - 1];
+            const lastDate = new Date(sortedDates[sortedDates.length - 1]);
+            for (let i = 1; i <= 3; i++) {
+                const nextDate = new Date(lastDate);
+                nextDate.setDate(lastDate.getDate() + i);
+                projectionLabels.push(nextDate.toISOString().split('T')[0]);
+                projectionData.push(lastAvg); // Projeta a última média
+            }
         }
 
         projectionChart = new Chart(projectionCtx, {
@@ -241,9 +243,9 @@ function renderCharts(data) {
             data: {
                 labels: projectionLabels,
                 datasets: [{
-                    label: 'Projeção de Vendas',
-                    data: projectionValues,
-                    backgroundColor: 'rgba(0, 100, 30, 0.7)',
+                    label: 'Projeção de Vendas (Média Móvel)',
+                    data: projectionData,
+                    backgroundColor: 'rgba(0, 72, 18, 0.6)',
                     borderColor: 'rgb(0, 72, 18)',
                     borderWidth: 1
                 }]
@@ -263,17 +265,15 @@ function renderCharts(data) {
     }
 }
 
-// Preencher dropdown dinâmico
+// Preencher dropdown de filtro dinamicamente
 function populateFilterDropdown(filterType) {
-    const dropdown = document.getElementById('filterValue');
-
-    // Proteção contra null
+    const dropdown = document.getElementById('filterValue'); // <--- CORRIGIDO AQUI!
     if (!dropdown) {
-        console.error('Elemento filterValue não encontrado no DOM');
+        console.error('Elemento filterValue não encontrado.');
         return;
     }
 
-    dropdown.innerHTML = '<option value="">Escolha uma opção...</option>';
+    dropdown.innerHTML = '<option value="">Escolha uma opção...</option>'; // Limpa e adiciona opção padrão
 
     if (filterType === 'all') {
         dropdown.classList.add('hidden');
@@ -282,34 +282,41 @@ function populateFilterDropdown(filterType) {
 
     dropdown.classList.remove('hidden');
 
-    const fieldMap = {
-        'medicamento': 'Medicamento',
-        'cidade': 'Cidade',
-        'categoria': 'Categoria',
-        'vendedor': 'Vendedor'
-    };
+    const uniqueValues = new Set();
+    let fieldName = '';
 
-    const field = fieldMap[filterType];
-
-    if (!field || allData.length === 0) {
-        console.warn('Campo não encontrado ou allData vazio para preencher dropdown');
-        return;
+    switch (filterType) {
+        case 'medicamento':
+            fieldName = 'Medicamento';
+            break;
+        case 'cidade':
+            fieldName = 'Cidade';
+            break;
+        case 'categoria':
+            fieldName = 'Categoria';
+            break;
+        case 'vendedor':
+            fieldName = 'Vendedor';
+            break;
+        default:
+            dropdown.classList.add('hidden');
+            return;
     }
 
-    const uniqueValues = [...new Set(
-        allData
-            .map(row => row[field])
-            .filter(value => value && value.trim() !== '')
-    )].sort();
+    allData.forEach(row => {
+        if (row[fieldName]) {
+            uniqueValues.add(row[fieldName]);
+        }
+    });
 
-    console.log(`Valores únicos para ${filterType}:`, uniqueValues);
-
-    uniqueValues.forEach(value => {
+    const sortedValues = Array.from(uniqueValues).sort();
+    sortedValues.forEach(value => {
         const option = document.createElement('option');
         option.value = value;
         option.textContent = value;
         dropdown.appendChild(option);
     });
+    console.log(`Dropdown '${filterType}' preenchido com ${sortedValues.length} opções.`);
 }
 
 // Atualizar data
@@ -329,7 +336,7 @@ function updateCurrentDate() {
 document.addEventListener('DOMContentLoaded', () => {
     console.log('DOM carregado. Iniciando carregamento do CSV...');
 
-    loadCSV();
+    loadCSV(); // Inicia o carregamento do CSV
 
     const filterTypeEl = document.getElementById('filterType');
     if (filterTypeEl) {
