@@ -21,25 +21,20 @@ async function loadCSV() {
         parseCSV(csv);
     } catch (error) {
         console.error('Erro ao carregar CSV:', error);
-        alert('Erro ao carregar dados. Verifique se o arquivo CSV existe e está no formato correto.');
+        alert('Erro ao carregar dados.');
     }
 }
 
 function parseCSV(csv) {
     try {
         const lines = csv.trim().split('\n');
-
         if (lines.length < 2) {
-            console.error('CSV vazio ou inválido');
             alert('CSV vazio ou inválido.');
             return;
         }
 
-        const firstLine = lines[0];
-        const separator = firstLine.includes('\t') ? '\t' : ',';
-
+        const separator = lines[0].includes('\t') ? '\t' : ',';
         const headers = lines[0].split(separator).map(h => h.trim().replace(/"/g, ''));
-        console.log("Cabeçalhos do CSV lidos:", headers);
 
         allData = [];
 
@@ -53,462 +48,292 @@ function parseCSV(csv) {
                 row[header] = values[index] || '';
             });
 
-            // --- CORREÇÃO AQUI: Ajustar o parsing do Preço para o formato "X,YY" ---
+            // CORREÇÃO DA VÍRGULA AQUI
             let rawPrice = row['Preço'].replace('R$', '').trim();
-            // Remove o separador de milhares (ponto) e substitui a vírgula por ponto decimal
-            rawPrice = rawPrice.replace(/\./g, '').replace(',', '.'); // Esta é a linha crucial!
+            rawPrice = rawPrice.replace(/\./g, '').replace(',', '.');
             let precoUnitario = parseFloat(rawPrice);
-            // --- FIM DA CORREÇÃO ---
 
-            if (isNaN(precoUnitario)) {
-                console.warn(`Preço unitário inválido para a linha ${i + 1}: ${row['Preço']}. Usando 0.`);
-                precoUnitario = 0;
-            }
-            row['Preço Unitário'] = precoUnitario; // Armazena como número
+            if (isNaN(precoUnitario)) precoUnitario = 0;
+            row['Preço Unitário'] = precoUnitario;
 
-            // Converter Quantidade para número
-            let quantidade = parseInt(row['Quantidade']);
-            if (isNaN(quantidade) || quantidade <= 0) {
-                console.warn(`Quantidade inválida para a linha ${i + 1}: ${row['Quantidade']}. Usando 1.`);
-                quantidade = 1;
-            }
-            row['Quantidade'] = quantidade; // Armazena como número
+            let quantidade = parseInt(row['Quantidade']) || 1;
+            row['Quantidade'] = quantidade;
 
-            // Calcular Preço Total
             row['Preço Total'] = precoUnitario * quantidade;
 
             allData.push(row);
         }
 
-        console.log("Dados carregados (allData):", allData);
-        console.log("Total de registros:", allData.length);
-        if (allData.length > 0) {
-            console.log("Primeira linha de dados (objeto):", allData[0]);
-        }
-
-        if (allData.length === 0) {
-            alert('Nenhum dado foi carregado do CSV.');
-            return;
-        }
-
-        // Inicializa os filtros e o dashboard
-        populateFilters(allData); // Popula o primeiro filtro (Cidade)
+        console.log(`CSV carregado com sucesso: ${allData.length} registros`);
+        initializeFilters();
         updateDashboard(allData);
 
     } catch (error) {
-        console.error('Erro ao fazer parsing do CSV:', error);
-        alert('Erro ao fazer parsing do CSV. Verifique o formato dos dados.');
+        console.error('Erro ao parsear CSV:', error);
+        alert('Erro ao processar dados do CSV.');
     }
 }
 
-// Funções de filtro encadeado
-function getUniqueValues(data, field) {
-    const values = new Set();
-    data.forEach(row => {
-        if (row[field]) {
-            values.add(row[field]);
-        }
+function getUniqueValues(data, column) {
+    const values = data.map(row => row[column]).filter(v => v);
+    return [...new Set(values)].sort();
+}
+
+function populateSelect(selectId, options, defaultText) {
+    const select = document.getElementById(selectId);
+    select.innerHTML = `<option value="all">${defaultText}</option>`;
+    options.forEach(option => {
+        const opt = document.createElement('option');
+        opt.value = option;
+        opt.textContent = option;
+        select.appendChild(opt);
     });
-    return Array.from(values).sort();
 }
 
-function populateDropdown(dropdownId, values, defaultValue) {
-    const dropdown = document.getElementById(dropdownId);
-    if (!dropdown) {
-        console.error(`Dropdown com ID '${dropdownId}' não encontrado.`);
-        return;
-    }
-    dropdown.innerHTML = `<option value="all">${defaultValue}</option>`;
-    values.forEach(value => {
-        const option = document.createElement('option');
-        option.value = value;
-        option.textContent = value;
-        dropdown.appendChild(option);
-    });
-    // Habilita o dropdown apenas se houver opções além da padrão
-    dropdown.disabled = (values.length === 0); 
-    console.log(`Dropdown '${dropdownId}' populado com ${values.length} valores.`);
-}
-
-function populateFilters(data) {
-    // Popula o filtro de Cidade
-    const cidades = getUniqueValues(data, 'Cidade');
-    populateDropdown('filterCidade', cidades, 'Todas as Cidades');
-
-    // Reseta e desabilita os outros filtros
-    resetDependentFilters('filterCategoria', 'Todas as Categorias');
-    resetDependentFilters('filterMedicamento', 'Todos os Medicamentos');
-    resetDependentFilters('filterVendedor', 'Todos os Vendedores');
-}
-
-function resetDependentFilters(dropdownId, defaultValue) {
-    const dropdown = document.getElementById(dropdownId);
-    if (dropdown) {
-        dropdown.innerHTML = `<option value="all">${defaultValue}</option>`;
-        dropdown.disabled = true;
-    }
+function initializeFilters() {
+    const cidades = getUniqueValues(allData, 'Cidade');
+    populateSelect('filterCidade', cidades, 'Todas as Cidades');
 }
 
 function applyFilters() {
-    let filteredData = allData;
-
     const cidade = document.getElementById('filterCidade').value;
     const categoria = document.getElementById('filterCategoria').value;
     const medicamento = document.getElementById('filterMedicamento').value;
     const vendedor = document.getElementById('filterVendedor').value;
 
+    let filtered = allData;
+
     if (cidade !== 'all') {
-        filteredData = filteredData.filter(row => row['Cidade'] === cidade);
+        filtered = filtered.filter(row => row['Cidade'] === cidade);
     }
     if (categoria !== 'all') {
-        filteredData = filteredData.filter(row => row['Categoria'] === categoria);
+        filtered = filtered.filter(row => row['Categoria'] === categoria);
     }
     if (medicamento !== 'all') {
-        filteredData = filteredData.filter(row => row['Medicamento'] === medicamento);
+        filtered = filtered.filter(row => row['Medicamento'] === medicamento);
     }
     if (vendedor !== 'all') {
-        filteredData = filteredData.filter(row => row['Vendedor'] === vendedor);
+        filtered = filtered.filter(row => row['Vendedor'] === vendedor);
     }
 
-    updateDashboard(filteredData);
-    return filteredData;
+    updateDashboard(filtered);
 }
 
-// Atualizar Dashboard
 function updateDashboard(data) {
     updateStats(data);
-    renderCharts(data);
-    renderTable(data);
-    updateLastUpdateDate();
+    updateCharts(data);
+    updateTable(data);
 }
 
-// Atualizar Estatísticas
 function updateStats(data) {
     const totalSales = data.length;
     const totalRevenue = data.reduce((sum, row) => sum + row['Preço Total'], 0);
     const avgTicket = totalSales > 0 ? totalRevenue / totalSales : 0;
 
-    // Calcular Produto Top
-    const productSales = {};
+    const productCounts = {};
     data.forEach(row => {
-        productSales[row['Medicamento']] = (productSales[row['Medicamento']] || 0) + row['Preço Total'];
+        const prod = row['Medicamento'];
+        productCounts[prod] = (productCounts[prod] || 0) + 1;
     });
 
-    let topProduct = '-';
-    let maxRevenue = 0;
-    for (const product in productSales) {
-        if (productSales[product] > maxRevenue) {
-            maxRevenue = productSales[product];
-            topProduct = product;
-        }
-    }
+    const topProduct = Object.keys(productCounts).reduce((a, b) => 
+        productCounts[a] > productCounts[b] ? a : b, 'N/A'
+    );
 
     document.getElementById('totalSales').textContent = formatNumber(totalSales);
     document.getElementById('totalRevenue').textContent = formatCurrency(totalRevenue);
     document.getElementById('avgTicket').textContent = formatCurrency(avgTicket);
     document.getElementById('topProduct').textContent = topProduct;
-
-    console.log('Estatísticas atualizadas:', { totalSales, totalRevenue, avgTicket, topProduct });
 }
 
-// Renderizar Gráficos
-function renderCharts(data) {
-    // Destruir gráficos existentes antes de criar novos
-    if (historicalChart) {
-        historicalChart.destroy();
-        historicalChart = null;
-    }
-    if (projectionChart) {
-        projectionChart.destroy();
-        projectionChart = null;
-    }
-
-    const dailySales = {};
+function updateCharts(data) {
+    const salesByDate = {};
     data.forEach(row => {
         const date = row['Data'];
-        dailySales[date] = (dailySales[date] || 0) + row['Preço Total'];
+        salesByDate[date] = (salesByDate[date] || 0) + row['Preço Total'];
     });
 
-    const sortedDates = Object.keys(dailySales).sort();
-    const historicalData = sortedDates.map(date => dailySales[date]);
+    const sortedDates = Object.keys(salesByDate).sort();
+    const revenues = sortedDates.map(date => salesByDate[date]);
 
-    // Gráfico Histórico
-    const historicalCtx = document.getElementById('historicalChart');
-    if (historicalCtx) {
-        historicalChart = new Chart(historicalCtx, {
-            type: 'line',
-            data: {
-                labels: sortedDates,
-                datasets: [{
-                    label: 'Receita Diária',
-                    data: historicalData,
-                    borderColor: 'rgb(0, 72, 72)',
-                    backgroundColor: 'rgba(0, 72, 72, 0.2)',
-                    tension: 0.1,
-                    fill: true
-                }]
+    const ctx1 = document.getElementById('historicalChart');
+    if (historicalChart) historicalChart.destroy();
+    historicalChart = new Chart(ctx1, {
+        type: 'line',
+        data: {
+            labels: sortedDates,
+            datasets: [{
+                label: 'Receita (R$)',
+                data: revenues,
+                borderColor: 'rgb(0, 72, 72)',
+                backgroundColor: 'rgba(0, 72, 72, 0.1)',
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { display: true }
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: {
-                        type: 'time',
-                        time: {
-                            unit: 'day',
-                            tooltipFormat: 'DD/MM/YYYY',
-                            displayFormats: {
-                                day: 'DD/MM'
-                            }
-                        },
-                        title: {
-                            display: true,
-                            text: 'Data'
-                        }
-                    },
-                    y: {
-                        beginAtZero: true,
-                        title: {
-                            display: true,
-                            text: 'Receita (R$)'
-                        },
-                        ticks: {
-                            callback: function(value) {
-                                return formatCurrency(value);
-                            }
-                        }
-                    }
-                },
-                plugins: {
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                return context.dataset.label + ': ' + formatCurrency(context.parsed.y);
-                            }
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return 'R$ ' + value.toLocaleString('pt-BR');
                         }
                     }
                 }
             }
-        });
-    }
+        }
+    });
 
-    // Gráfico Projeção
-    const last7DaysRevenue = historicalData.slice(-7);
-    const avgLast7Days = last7DaysRevenue.length > 0 ? last7DaysRevenue.reduce((a, b) => a + b, 0) / last7DaysRevenue.length : 0;
-
+    const lastRevenue = revenues[revenues.length - 1] || 0;
+    const projectionDays = 7;
     const projectionLabels = [];
     const projectionData = [];
-    let lastDate = new Date(sortedDates[sortedDates.length - 1]);
 
-    for (let i = 1; i <= 7; i++) {
-        lastDate.setDate(lastDate.getDate() + 1);
-        projectionLabels.push(lastDate.toISOString().split('T')[0]);
-        projectionData.push(avgLast7Days * (1 + (Math.random() - 0.5) * 0.1)); // Variação de +/- 5%
+    for (let i = 1; i <= projectionDays; i++) {
+        projectionLabels.push(`+${i}d`);
+        projectionData.push(lastRevenue * (1 + Math.random() * 0.1));
     }
 
-    const projectionCtx = document.getElementById('projectionChart');
-    if (projectionCtx) {
-        projectionChart = new Chart(projectionCtx, {
-            type: 'bar',
-            data: {
-                labels: projectionLabels,
-                datasets: [{
-                    label: 'Receita Projetada',
-                    data: projectionData,
-                    backgroundColor: 'rgba(0, 72, 72, 0.6)',
-                    borderColor: 'rgb(0, 72, 72)',
-                    borderWidth: 1
-                }]
+    const ctx2 = document.getElementById('projectionChart');
+    if (projectionChart) projectionChart.destroy();
+    projectionChart = new Chart(ctx2, {
+        type: 'bar',
+        data: {
+            labels: projectionLabels,
+            datasets: [{
+                label: 'Projeção (R$)',
+                data: projectionData,
+                backgroundColor: 'rgba(0, 72, 72, 0.7)',
+                borderColor: 'rgb(0, 72, 72)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { display: true }
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: {
-                        type: 'time',
-                        time: {
-                            unit: 'day',
-                            tooltipFormat: 'DD/MM/YYYY',
-                            displayFormats: {
-                                day: 'DD/MM'
-                            }
-                        },
-                        title: {
-                            display: true,
-                            text: 'Data'
-                        }
-                    },
-                    y: {
-                        beginAtZero: true,
-                        title: {
-                            display: true,
-                            text: 'Receita (R$)'
-                        },
-                        ticks: {
-                            callback: function(value) {
-                                return formatCurrency(value);
-                            }
-                        }
-                    }
-                },
-                plugins: {
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                return context.dataset.label + ': ' + formatCurrency(context.parsed.y);
-                            }
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return 'R$ ' + value.toLocaleString('pt-BR');
                         }
                     }
                 }
             }
-        });
-    }
-    console.log('Gráficos atualizados.');
+        }
+    });
 }
 
-// Renderizar Tabela
-function renderTable(data) {
-    const tableBody = document.getElementById('salesTableBody');
-    if (!tableBody) {
-        console.error("Elemento 'salesTableBody' não encontrado.");
-        return;
-    }
-    tableBody.innerHTML = ''; // Limpa a tabela existente
+function updateTable(data) {
+    const tbody = document.getElementById('salesTableBody');
+    tbody.innerHTML = '';
 
-    // Limita a 500 registros ou o total de dados, o que for menor
-    const recordsToShow = Math.min(data.length, 500); 
-    const sortedData = data.sort((a, b) => new Date(b['Data']) - new Date(a['Data'])); // Ordena por data decrescente
+    const limitedData = data.slice(0, 500);
 
-    for (let i = 0; i < recordsToShow; i++) {
-        const rowData = sortedData[i];
-        const row = tableBody.insertRow();
-
-        row.insertCell().textContent = rowData['Data'];
-        row.insertCell().textContent = rowData['Medicamento'];
-        row.insertCell().textContent = rowData['Categoria'];
-        row.insertCell().textContent = formatNumber(rowData['Quantidade']);
-        row.insertCell().textContent = formatCurrency(rowData['Preço Unitário']);
-        row.insertCell().textContent = formatCurrency(rowData['Preço Total']);
-        row.insertCell().textContent = rowData['Cidade'];
-        row.insertCell().textContent = rowData['Vendedor'];
-    }
-    console.log(`Tabela 'Detalhamento Diário' preenchida com ${recordsToShow} registros.`);
+    limitedData.forEach(row => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${row['Data']}</td>
+            <td>${row['Medicamento']}</td>
+            <td>${row['Categoria']}</td>
+            <td>${row['Quantidade']}</td>
+            <td>${formatCurrency(row['Preço Unitário'])}</td>
+            <td>${formatCurrency(row['Preço Total'])}</td>
+            <td>${row['Cidade']}</td>
+            <td>${row['Vendedor']}</td>
+        `;
+        tbody.appendChild(tr);
+    });
 }
 
-// Atualizar data da última atualização
-function updateLastUpdateDate() {
-    const lastUpdateDateElement = document.getElementById('lastUpdateDate');
-    if (lastUpdateDateElement) {
-        const now = new Date();
-        const options = {
-            day: '2-digit',
-            month: 'long',
-            year: 'numeric'
-        };
-        lastUpdateDateElement.textContent = now.toLocaleDateString('pt-BR', options);
-    }
-}
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM carregado. Iniciando...');
+    loadCSV();
 
-// Inicialização - TODOS os Event Listeners dentro do DOMContentLoaded
-document.addEventListener('DOMContentLoaded', () => {
-    console.log('DOM carregado. Iniciando carregamento do CSV...');
+    document.getElementById('filterCidade').addEventListener('change', function() {
+        let filtered = allData;
 
-    loadCSV(); // Inicia o carregamento do CSV
+        if (this.value !== 'all') {
+            filtered = filtered.filter(row => row['Cidade'] === this.value);
+        }
 
-    // Event Listeners para os filtros encadeados
-    const filterCidadeEl = document.getElementById('filterCidade');
-    const filterCategoriaEl = document.getElementById('filterCategoria');
-    const filterMedicamentoEl = document.getElementById('filterMedicamento');
-    const filterVendedorEl = document.getElementById('filterVendedor');
+        const categorias = getUniqueValues(filtered, 'Categoria');
+        populateSelect('filterCategoria', categorias, 'Todas as Categorias');
+        document.getElementById('filterCategoria').disabled = (categorias.length === 0);
 
-    if (filterCidadeEl) {
-        filterCidadeEl.addEventListener('change', () => {
-            const selectedCidade = filterCidadeEl.value;
-            let currentFilteredData = allData;
+        document.getElementById('filterMedicamento').innerHTML = '<option value="all">Todos os Medicamentos</option>';
+        document.getElementById('filterMedicamento').disabled = true;
+        document.getElementById('filterVendedor').innerHTML = '<option value="all">Todos os Vendedores</option>';
+        document.getElementById('filterVendedor').disabled = true;
 
-            if (selectedCidade !== 'all') {
-                currentFilteredData = allData.filter(row => row['Cidade'] === selectedCidade);
-            }
+        applyFilters();
+    });
 
-            // Popula Categoria com base na Cidade selecionada
-            const categorias = getUniqueValues(currentFilteredData, 'Categoria');
-            populateDropdown('filterCategoria', categorias, 'Todas as Categorias');
+    document.getElementById('filterCategoria').addEventListener('change', function() {
+        const cidade = document.getElementById('filterCidade').value;
+        let filtered = allData;
 
-            // Reseta e desabilita os filtros seguintes
-            resetDependentFilters('filterMedicamento', 'Todos os Medicamentos');
-            resetDependentFilters('filterVendedor', 'Todos os Vendedores');
+        if (cidade !== 'all') {
+            filtered = filtered.filter(row => row['Cidade'] === cidade);
+        }
+        if (this.value !== 'all') {
+            filtered = filtered.filter(row => row['Categoria'] === this.value);
+        }
 
-            applyFilters(); // Aplica o filtro atual e atualiza o dashboard
-        });
-    }
+        const medicamentos = getUniqueValues(filtered, 'Medicamento');
+        populateSelect('filterMedicamento', medicamentos, 'Todos os Medicamentos');
+        document.getElementById('filterMedicamento').disabled = (medicamentos.length === 0);
 
-    if (filterCategoriaEl) {
-        filterCategoriaEl.addEventListener('change', () => {
-            const selectedCidade = filterCidadeEl.value;
-            const selectedCategoria = filterCategoriaEl.value;
-            let currentFilteredData = allData;
+        document.getElementById('filterVendedor').innerHTML = '<option value="all">Todos os Vendedores</option>';
+        document.getElementById('filterVendedor').disabled = true;
 
-            if (selectedCidade !== 'all') {
-                currentFilteredData = currentFilteredData.filter(row => row['Cidade'] === selectedCidade);
-            }
-            if (selectedCategoria !== 'all') {
-                currentFilteredData = currentFilteredData.filter(row => row['Categoria'] === selectedCategoria);
-            }
+        applyFilters();
+    });
 
-            // Popula Medicamento com base na Cidade e Categoria selecionadas
-            const medicamentos = getUniqueValues(currentFilteredData, 'Medicamento');
-            populateDropdown('filterMedicamento', medicamentos, 'Todos os Medicamentos');
+    document.getElementById('filterMedicamento').addEventListener('change', function() {
+        const cidade = document.getElementById('filterCidade').value;
+        const categoria = document.getElementById('filterCategoria').value;
+        let filtered = allData;
 
-            // Reseta e desabilita o filtro de Vendedor
-            resetDependentFilters('filterVendedor', 'Todos os Vendedores');
+        if (cidade !== 'all') {
+            filtered = filtered.filter(row => row['Cidade'] === cidade);
+        }
+        if (categoria !== 'all') {
+            filtered = filtered.filter(row => row['Categoria'] === categoria);
+        }
+        if (this.value !== 'all') {
+            filtered = filtered.filter(row => row['Medicamento'] === this.value);
+        }
 
-            applyFilters(); // Aplica o filtro atual e atualiza o dashboard
-        });
-    }
+        const vendedores = getUniqueValues(filtered, 'Vendedor');
+        populateSelect('filterVendedor', vendedores, 'Todos os Vendedores');
+        document.getElementById('filterVendedor').disabled = (vendedores.length === 0);
 
-    if (filterMedicamentoEl) {
-        filterMedicamentoEl.addEventListener('change', () => {
-            const selectedCidade = filterCidadeEl.value;
-            const selectedCategoria = filterCategoriaEl.value;
-            const selectedMedicamento = filterMedicamentoEl.value;
-            let currentFilteredData = allData;
+        applyFilters();
+    });
 
-            if (selectedCidade !== 'all') {
-                currentFilteredData = currentFilteredData.filter(row => row['Cidade'] === selectedCidade);
-            }
-            if (selectedCategoria !== 'all') {
-                currentFilteredData = currentFilteredData.filter(row => row['Categoria'] === selectedCategoria);
-            }
-            if (selectedMedicamento !== 'all') {
-                currentFilteredData = currentFilteredData.filter(row => row['Medicamento'] === selectedMedicamento);
-            }
+    document.getElementById('filterVendedor').addEventListener('change', function() {
+        applyFilters();
+    });
 
-            // Popula Vendedor com base na Cidade, Categoria e Medicamento selecionados
-            const vendedores = getUniqueValues(currentFilteredData, 'Vendedor');
-            populateDropdown('filterVendedor', vendedores, 'Todos os Vendedores');
+    document.getElementById('clearBtn').addEventListener('click', function() {
+        document.getElementById('filterCidade').value = 'all';
+        document.getElementById('filterCategoria').value = 'all';
+        document.getElementById('filterMedicamento').value = 'all';
+        document.getElementById('filterVendedor').value = 'all';
 
-            applyFilters(); // Aplica o filtro atual e atualiza o dashboard
-        });
-    }
+        document.getElementById('filterCategoria').disabled = true;
+        document.getElementById('filterMedicamento').disabled = true;
+        document.getElementById('filterVendedor').disabled = true;
 
-    if (filterVendedorEl) {
-        filterVendedorEl.addEventListener('change', () => {
-            applyFilters(); // Aplica o filtro atual e atualiza o dashboard
-        });
-    }
-
-    const clearBtn = document.getElementById('clearBtn');
-    if (clearBtn) {
-        clearBtn.addEventListener('click', () => {
-            // Reseta todos os dropdowns para 'all' e desabilita os dependentes
-            filterCidadeEl.value = 'all';
-            resetDependentFilters('filterCategoria', 'Todas as Categorias');
-            resetDependentFilters('filterMedicamento', 'Todos os Medicamentos');
-            resetDependentFilters('filterVendedor', 'Todos os Vendedores');
-
-            // Dispara o evento change no filtro de Cidade para repopular os dependentes
-            filterCidadeEl.dispatchEvent(new Event('change')); 
-            // A chamada a applyFilters() dentro do change de filterCidadeEl já cuidará do updateDashboard(allData)
-        });
-    }
+        initializeFilters();
+        updateDashboard(allData);
+    });
 });
