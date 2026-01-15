@@ -147,13 +147,18 @@ function renderTable(data) {
 
     displayData.forEach(row => {
         const tr = document.createElement('tr');
+
+        // Proteção para row.Preço antes de tentar formatar
+        const precoValue = row.Preço ? parseFloat(row.Preço.toString().replace(/R\$\s*/g, '').replace(/\s/g, '').replace(',', '.')) : 0;
+        const precoFormatado = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(precoValue);
+
         tr.innerHTML = `
             <td>${row.Data || '-'}</td>         <!-- Usando 'Data' -->
             <td>${row.Medicamento || '-'}</td>  <!-- Usando 'Medicamento' -->
             <td>${row.Categoria || '-'}</td>
             <td>${row.Cidade || '-'}</td>       <!-- Usando 'Cidade' -->
             <td>${row.Vendedor || '-'}</td>     <!-- Usando 'Vendedor' -->
-            <td>${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(parseFloat(row.Preço.toString().replace(/R\$\s*/g, '').replace(/\s/g, '').replace(',', '.')) || 0)}</td> <!-- Usando 'Preço' -->
+            <td>${precoFormatado}</td>          <!-- Usando 'Preço' formatado com proteção -->
         `;
         tbody.appendChild(tr);
     });
