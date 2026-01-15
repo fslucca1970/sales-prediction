@@ -48,9 +48,8 @@ function parseCSV(csv) {
                 row[header] = values[index] || '';
             });
 
-            // CORREÇÃO DO PARSING DE PREÇO (mantida a correção que funcionou)
             let rawPrice = row['Preço'].replace('R$', '').trim();
-            let precoUnitario = parseFloat(rawPrice); 
+            let precoUnitario = parseFloat(rawPrice);
 
             if (isNaN(precoUnitario)) precoUnitario = 0;
             row['Preço Unitário'] = precoUnitario;
@@ -64,8 +63,8 @@ function parseCSV(csv) {
         }
 
         console.log(`CSV carregado com sucesso: ${allData.length} registros`);
-        initializeFilters(); // Popula todos os filtros na carga inicial
-        updateDashboard(allData); // Atualiza o dashboard com todos os dados inicialmente
+        initializeFilters();
+        updateDashboard(allData);
 
     } catch (error) {
         console.error('Erro ao parsear CSV:', error);
@@ -80,8 +79,7 @@ function getUniqueValues(data, column) {
 
 function populateSelect(selectId, options, defaultText) {
     const select = document.getElementById(selectId);
-    // Guarda a seleção atual antes de limpar
-    const currentSelection = select.value; 
+    const currentSelection = select.value;
     select.innerHTML = `<option value="all">${defaultText}</option>`;
     options.forEach(option => {
         const opt = document.createElement('option');
@@ -89,16 +87,14 @@ function populateSelect(selectId, options, defaultText) {
         opt.textContent = option;
         select.appendChild(opt);
     });
-    // Tenta restaurar a seleção atual, se ainda for uma opção válida
     if (options.includes(currentSelection)) {
         select.value = currentSelection;
     } else {
-        select.value = 'all'; // Volta para 'all' se a opção não existe mais
+        select.value = 'all';
     }
-    select.disabled = false; // Mantém sempre habilitado
+    select.disabled = false;
 }
 
-// Modificado: initializeFilters agora popula TODOS os filtros com base em allData
 function initializeFilters() {
     populateSelect('filterCidade', getUniqueValues(allData, 'Cidade'), 'Todas as Cidades');
     populateSelect('filterCategoria', getUniqueValues(allData, 'Categoria'), 'Todas as Categorias');
@@ -133,7 +129,8 @@ function applyFilters() {
 function updateDashboard(data) {
     updateStats(data);
     updateCharts(data);
-    updateTable(data);
+    updateTable(data); // Agora updateTable também receberá os dados brutos e fará sua própria agregação se necessário
+    updateLastUpdateDate();
 }
 
 function updateStats(data) {
@@ -157,22 +154,47 @@ function updateStats(data) {
     document.getElementById('topProduct').textContent = topProduct;
 }
 
-function updateCharts(data) {
-    const salesByDate = {};
+// Função para agregar dados por período para os gráficos
+function aggregateDataForCharts(data, period) {
+    const aggregated = {};
+
     data.forEach(row => {
-        const date = row['Data'];
-        salesByDate[date] = (salesByDate[date] || 0) + row['Preço Total'];
+        const date = new Date(row['Data']);
+        let key;
+
+        if (period === 'daily') {
+            key = row['Data']; // Mantém a data original
+        } else if (period === 'weekly') {
+            const startOfWeek = new Date(date);
+            startOfWeek.setDate(date.getDate() - date.getDay());
+            key = startOfWeek.toISOString().split('T')[0]; // Formato YYYY-MM-DD para ordenação
+        } else if (period === 'monthly') {
+            key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`; // Formato YYYY-MM
+        }
+
+        if (!aggregated[key]) {
+            aggregated[key] = 0;
+        }
+        aggregated[key] += row['Preço Total'];
     });
 
-    const sortedDates = Object.keys(salesByDate).sort();
-    const revenues = sortedDates.map(date => salesByDate[date]);
+    return aggregated;
+}
 
+function updateCharts(data) {
+    const period = document.getElementById('filterPeriodo').value;
+    const salesByPeriod = aggregateDataForCharts(data, period); // Usa a nova função de agregação para gráficos
+
+    const sortedKeys = Object.keys(salesByPeriod).sort();
+    const revenues = sortedKeys.map(key => salesByPeriod[key]);
+
+    // Gráfico Histórico
     const ctx1 = document.getElementById('historicalChart');
     if (historicalChart) historicalChart.destroy();
     historicalChart = new Chart(ctx1, {
         type: 'line',
         data: {
-            labels: sortedDates,
+            labels: sortedKeys,
             datasets: [{
                 label: 'Receita (R$)',
                 data: revenues,
@@ -187,6 +209,22 @@ function updateCharts(data) {
                 legend: { display: true }
             },
             scales: {
+                x: { // Adicionado para formatar o eixo X corretamente
+                    type: 'time',
+                    time: {
+                        unit: period === 'daily' ? 'day' : period === 'weekly' ? 'week' : 'month',
+                        tooltipFormat: period === 'daily' ? 'dd/MM/yyyy' : period === 'weekly' ? 'dd/MM/yyyy' : 'MM/yyyy',
+                        displayFormats: {
+                            day: 'dd/MM',
+                            week: 'dd/MM',
+                            month: 'MM/yyyy'
+                        }
+                    },
+                    title: {
+                        display: true,
+                        text: 'Período'
+                    }
+                },
                 y: {
                     beginAtZero: true,
                     ticks: {
@@ -199,13 +237,18 @@ function updateCharts(data) {
         }
     });
 
+    // Gráfico Projeção
     const lastRevenue = revenues[revenues.length - 1] || 0;
-    const projectionDays = 7;
+    const projectionSteps = 7; // Número de passos para a projeção (dias, semanas ou meses)
     const projectionLabels = [];
     const projectionData = [];
 
-    for (let i = 1; i <= projectionDays; i++) {
-        projectionLabels.push(`+${i}d`);
+    for (let i = 1; i <= projectionSteps; i++) {
+        let labelSuffix = '';
+        if (period === 'daily') labelSuffix = 'd';
+        else if (period === 'weekly') labelSuffix = 'sem';
+        else if (period === 'monthly') labelSuffix = 'mês';
+        projectionLabels.push(`+${i}${labelSuffix}`);
         projectionData.push(lastRevenue * (1 + Math.random() * 0.1));
     }
 
@@ -242,34 +285,143 @@ function updateCharts(data) {
     });
 }
 
+// NOVA FUNÇÃO: Agrega dados para a tabela
+function aggregateDataForTable(data, period) {
+    if (period === 'daily') {
+        return data.slice(0, 500); // Retorna os dados brutos para o modo diário
+    }
+
+    const aggregated = {};
+    data.forEach(row => {
+        const date = new Date(row['Data']);
+        let key;
+
+        if (period === 'weekly') {
+            const startOfWeek = new Date(date);
+            startOfWeek.setDate(date.getDate() - date.getDay());
+            key = `Semana de ${startOfWeek.toLocaleDateString('pt-BR')}`;
+        } else if (period === 'monthly') {
+            key = `${date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}`;
+        }
+
+        if (!aggregated[key]) {
+            aggregated[key] = {
+                'Período': key,
+                'Total de Vendas': 0,
+                'Receita Total': 0,
+                'Medicamentos Vendidos': new Set(),
+                'Categorias Vendidas': new Set(),
+                'Cidades': new Set(),
+                'Vendedores': new Set()
+            };
+        }
+        aggregated[key]['Total de Vendas'] += row['Quantidade'];
+        aggregated[key]['Receita Total'] += row['Preço Total'];
+        aggregated[key]['Medicamentos Vendidos'].add(row['Medicamento']);
+        aggregated[key]['Categorias Vendidas'].add(row['Categoria']);
+        aggregated[key]['Cidades'].add(row['Cidade']);
+        aggregated[key]['Vendedores'].add(row['Vendedor']);
+    });
+
+    // Converte os Sets para strings para exibição na tabela
+    return Object.values(aggregated).map(item => ({
+        'Período': item['Período'],
+        'Total de Vendas': item['Total de Vendas'],
+        'Receita Total': item['Receita Total'],
+        'Medicamentos Vendidos': Array.from(item['Medicamentos Vendidos']).join(', '),
+        'Categorias Vendidas': Array.from(item['Categorias Vendidas']).join(', '),
+        'Cidades': Array.from(item['Cidades']).join(', '),
+        'Vendedores': Array.from(item['Vendedores']).join(', ')
+    }));
+}
+
+
 function updateTable(data) {
     const tbody = document.getElementById('salesTableBody');
     tbody.innerHTML = '';
 
-    const limitedData = data.slice(0, 500);
+    const period = document.getElementById('filterPeriodo').value;
+    const aggregatedTableData = aggregateDataForTable(data, period);
 
-    limitedData.forEach(row => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td>${row['Data']}</td>
-            <td>${row['Medicamento']}</td>
-            <td>${row['Categoria']}</td>
-            <td>${row['Quantidade']}</td>
-            <td>${formatCurrency(row['Preço Unitário'])}</td>
-            <td>${formatCurrency(row['Preço Total'])}</td>
-            <td>${row['Cidade']}</td>
-            <td>${row['Vendedor']}</td>
+    // Atualiza o título da tabela
+    const tableTitleElement = document.querySelector('.table-section h3');
+    if (tableTitleElement) {
+        tableTitleElement.textContent = `📋 Detalhamento ${period === 'daily' ? 'Diário' : period === 'weekly' ? 'Semanal' : 'Mensal'} (Máximo 500 linhas)`;
+    }
+
+    // Atualiza o cabeçalho da tabela
+    const thead = document.querySelector('#salesTable thead tr');
+    thead.innerHTML = ''; // Limpa o cabeçalho existente
+
+    if (period === 'daily') {
+        thead.innerHTML = `
+            <th>Data</th>
+            <th>Medicamento</th>
+            <th>Categoria</th>
+            <th>Quantidade</th>
+            <th>Preço Unitário</th>
+            <th>Preço Total</th>
+            <th>Cidade</th>
+            <th>Vendedor</th>
         `;
-        tbody.appendChild(tr);
-    });
+        aggregatedTableData.forEach(row => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${row['Data']}</td>
+                <td>${row['Medicamento']}</td>
+                <td>${row['Categoria']}</td>
+                <td>${row['Quantidade']}</td>
+                <td>${formatCurrency(row['Preço Unitário'])}</td>
+                <td>${formatCurrency(row['Preço Total'])}</td>
+                <td>${row['Cidade']}</td>
+                <td>${row['Vendedor']}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    } else {
+        thead.innerHTML = `
+            <th>Período</th>
+            <th>Total de Vendas</th>
+            <th>Receita Total</th>
+            <th>Medicamentos Vendidos</th>
+            <th>Categorias Vendidas</th>
+            <th>Cidades</th>
+            <th>Vendedores</th>
+        `;
+        aggregatedTableData.forEach(row => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${row['Período']}</td>
+                <td>${formatNumber(row['Total de Vendas'])}</td>
+                <td>${formatCurrency(row['Receita Total'])}</td>
+                <td>${row['Medicamentos Vendidos']}</td>
+                <td>${row['Categorias Vendidas']}</td>
+                <td>${row['Cidades']}</td>
+                <td>${row['Vendedores']}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+}
+
+
+function updateLastUpdateDate() {
+    const lastUpdateDateElement = document.getElementById('lastUpdateDate');
+    if (lastUpdateDateElement) {
+        const now = new Date();
+        const options = {
+            day: '2-digit',
+            month: 'long',
+            year: 'numeric'
+        };
+        lastUpdateDateElement.textContent = now.toLocaleDateString('pt-BR', options);
+    }
 }
 
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM carregado. Iniciando...');
     loadCSV();
 
-    // Event Listeners para os filtros
-    // Cada filtro agora chama applyFilters e updateDependentFilters
     document.getElementById('filterCidade').addEventListener('change', function() {
         applyFilters();
         updateDependentFilters();
@@ -290,17 +442,21 @@ document.addEventListener('DOMContentLoaded', function() {
         updateDependentFilters();
     });
 
+    document.getElementById('filterPeriodo').addEventListener('change', function() {
+        applyFilters(); // Re-aplica os filtros para atualizar o dashboard com o novo período
+    });
+
     document.getElementById('clearBtn').addEventListener('click', function() {
         document.getElementById('filterCidade').value = 'all';
         document.getElementById('filterCategoria').value = 'all';
         document.getElementById('filterMedicamento').value = 'all';
         document.getElementById('filterVendedor').value = 'all';
+        document.getElementById('filterPeriodo').value = 'daily'; // Reseta o período para diário
 
-        initializeFilters(); // Repopula todos os filtros com base em allData
-        updateDashboard(allData); // Atualiza o dashboard com todos os dados
+        initializeFilters();
+        updateDashboard(allData);
     });
 
-    // Função para atualizar os filtros dependentes (opções)
     function updateDependentFilters() {
         const selectedCidade = document.getElementById('filterCidade').value;
         const selectedCategoria = document.getElementById('filterCategoria').value;
@@ -309,39 +465,30 @@ document.addEventListener('DOMContentLoaded', function() {
 
         let filteredForNextDropdowns = allData;
 
-        // Filtra os dados para popular os próximos dropdowns
         if (selectedCidade !== 'all') {
             filteredForNextDropdowns = filteredForNextDropdowns.filter(row => row['Cidade'] === selectedCidade);
         }
-        // Repopula Categoria
         populateSelect('filterCategoria', getUniqueValues(filteredForNextDropdowns, 'Categoria'), 'Todas as Categorias');
-        // Mantém a seleção atual se ainda for válida
         if (selectedCategoria !== 'all' && getUniqueValues(filteredForNextDropdowns, 'Categoria').includes(selectedCategoria)) {
             document.getElementById('filterCategoria').value = selectedCategoria;
         } else {
             document.getElementById('filterCategoria').value = 'all';
         }
 
-        // Filtra mais para popular Medicamento
         if (selectedCategoria !== 'all') {
             filteredForNextDropdowns = filteredForNextDropdowns.filter(row => row['Categoria'] === selectedCategoria);
         }
-        // Repopula Medicamento
         populateSelect('filterMedicamento', getUniqueValues(filteredForNextDropdowns, 'Medicamento'), 'Todos os Medicamentos');
-        // Mantém a seleção atual se ainda for válida
         if (selectedMedicamento !== 'all' && getUniqueValues(filteredForNextDropdowns, 'Medicamento').includes(selectedMedicamento)) {
             document.getElementById('filterMedicamento').value = selectedMedicamento;
         } else {
             document.getElementById('filterMedicamento').value = 'all';
         }
 
-        // Filtra mais para popular Vendedor
         if (selectedMedicamento !== 'all') {
             filteredForNextDropdowns = filteredForNextDropdowns.filter(row => row['Medicamento'] === selectedMedicamento);
         }
-        // Repopula Vendedor
         populateSelect('filterVendedor', getUniqueValues(filteredForNextDropdowns, 'Vendedor'), 'Todos os Vendedores');
-        // Mantém a seleção atual se ainda for válida
         if (selectedVendedor !== 'all' && getUniqueValues(filteredForNextDropdowns, 'Vendedor').includes(selectedVendedor)) {
             document.getElementById('filterVendedor').value = selectedVendedor;
         } else {
