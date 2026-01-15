@@ -90,7 +90,7 @@ function parseCSV(csv) {
             let precoUnitarioRaw = String(row['Preço']).replace('R$', '').replace(/\./g, '').replace(',', '.').trim();
             const precoUnitario = parseFloat(precoUnitarioRaw);
             if (isNaN(precoUnitario)) {
-                console.warn(`Linha ${i + 1}: Preço Unitário inválido "${row['Preço']}". Linha ignorada.`);
+                console.warn(`Linha ${i + 1}: Preço Unitário inválido "${row['Preço']}". Usando 0.`);
                 isValidRow = false;
             }
             row['Preço Unitário'] = precoUnitario; // Armazenar como 'Preço Unitário' para consistência interna
@@ -98,7 +98,7 @@ function parseCSV(csv) {
             let quantidadeRaw = String(row['Quantidade']).replace('.', '').replace(',', '.').trim();
             const quantidade = parseInt(quantidadeRaw, 10);
             if (isNaN(quantidade)) {
-                console.warn(`Linha ${i + 1}: Quantidade inválida "${row['Quantidade']}". Linha ignorada.`);
+                console.warn(`Linha ${i + 1}: Quantidade inválida "${row['Quantidade']}". Usando 1.`);
                 isValidRow = false;
             }
             row['Quantidade'] = quantidade;
@@ -470,5 +470,105 @@ function renderCharts(data, period) {
                     },
                     title: {
                         display: true,
+                        text: 'Período'
+                    }
+                },
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: historicalMetricLabel
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return historicalMetricFormat(value);
+                        }
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed.y !== null) {
+                                label += historicalMetricFormat(context.parsed.y);
+                            }
+                            return label;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
 
+function updateTable(data) {
+    const tableBody = document.getElementById('salesTableBody');
+    if (!tableBody) {
+        console.error("Elemento 'salesTableBody' não encontrado.");
+        return;
+    }
+    tableBody.innerHTML = ''; // Limpa a tabela
 
+    // Limita a exibição a um número razoável de linhas para evitar sobrecarga
+    const displayData = data.slice(0, 500);
+
+    // Atualiza o cabeçalho da tabela dinamicamente para o modo diário
+    const tableHeadRow = document.getElementById('salesTable').querySelector('thead tr');
+    if (tableHeadRow) {
+        tableHeadRow.innerHTML = `
+            <th>Data</th>
+            <th>Medicamento</th>
+            <th>Categoria</th>
+            <th>Quantidade</th>
+            <th>Preço Unitário</th>
+            <th>Preço Total</th>
+            <th>Cidade</th>
+            <th>Vendedor</th>
+        `;
+    }
+
+    displayData.forEach(item => {
+        const row = tableBody.insertRow();
+        row.insertCell().textContent = item['Data'].toLocaleDateString('pt-BR');
+        row.insertCell().textContent = item['Medicamento'];
+        row.insertCell().textContent = item['Categoria'];
+        row.insertCell().textContent = formatNumber(item['Quantidade']);
+        row.insertCell().textContent = formatCurrency(item['Preço Unitário']);
+        row.insertCell().textContent = formatCurrency(item['Preço Total']);
+        row.insertCell().textContent = item['Cidade'];
+        row.insertCell().textContent = item['Vendedor'];
+    });
+
+    document.getElementById('tableTitle').textContent = `📋 Detalhamento Diário (Máximo ${displayData.length} linhas)`;
+}
+
+// Event Listeners
+document.addEventListener('DOMContentLoaded', () => {
+    loadCSV();
+
+    // Event listeners para os filtros
+    document.getElementById('filterCidade').addEventListener('change', () => {
+        applyFilters();
+        updateDependentFilters(); // Garante que os filtros dependentes sejam atualizados
+    });
+    document.getElementById('filterCategoria').addEventListener('change', () => {
+        applyFilters();
+        updateDependentFilters();
+    });
+    document.getElementById('filterMedicamento').addEventListener('change', () => {
+        applyFilters();
+        updateDependentFilters();
+    });
+    document.getElementById('filterVendedor').addEventListener('change', () => {
+        applyFilters();
+        updateDependentFilters();
+    });
+    document.getElementById('filterPeriodo').addEventListener('change', applyFilters);
+    document.getElementById('projectionMetric').addEventListener('change', applyFilters); // Event listener para a métrica da projeção
+    document.getElementById('clearBtn').addEventListener('click', clearFilters);
+});
