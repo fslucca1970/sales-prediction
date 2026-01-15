@@ -135,13 +135,13 @@ function updateStats(data) {
 
     document.getElementById('totalSales').textContent = totalSales;
     document.getElementById('totalRevenue').textContent = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalRevenue);
-    document.getElementById('avgTicket').textContent = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(averageTicket); // ID CORRIGIDO AQUI
+    document.getElementById('avgTicket').textContent = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(averageTicket);
     document.getElementById('topProduct').textContent = topProduct;
 }
 
 // Renderizar tabela
 function renderTable(data) {
-    const tableBody = document.getElementById('salesTableBody'); // ID CORRIGIDO AQUI
+    const tableBody = document.getElementById('salesTableBody');
     if (!tableBody) {
         console.error("Elemento 'salesTableBody' não encontrado.");
         return;
@@ -208,7 +208,7 @@ function renderCharts(data) {
             data: {
                 labels: sortedDates,
                 datasets: [{
-                    label: 'Vendas Diárias (R$)', // Rótulo atualizado
+                    label: 'Vendas Diárias (R$)',
                     data: salesValues,
                     borderColor: 'rgb(0, 72, 18)',
                     backgroundColor: 'rgba(0, 72, 18, 0.1)',
@@ -225,13 +225,13 @@ function renderCharts(data) {
                         beginAtZero: true,
                         ticks: { 
                             stepSize: 1,
-                            callback: function(value) { // Formatação para moeda
+                            callback: function(value) {
                                 return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
                             }
                         }
                     }
                 },
-                tooltip: { // Formatação do tooltip
+                tooltip: {
                     callbacks: {
                         label: function(context) {
                             let label = context.dataset.label || '';
@@ -258,13 +258,12 @@ function renderCharts(data) {
 
         // Calcula a média móvel dos últimos 7 dias para projeção
         for (let i = 0; i < numDays; i++) {
-            if (i >= 6) { // Precisa de pelo menos 7 dias para calcular a primeira média
+            if (i >= 6) {
                 const last7Days = salesValues.slice(i - 6, i + 1);
                 const sum = last7Days.reduce((a, b) => a + b, 0);
                 projectionData.push(sum / last7Days.length);
                 projectionLabels.push(sortedDates[i]);
             } else {
-                // Para os primeiros dias, a projeção pode ser a própria venda diária ou 0
                 projectionData.push(salesValues[i]); 
                 projectionLabels.push(sortedDates[i]);
             }
@@ -278,7 +277,7 @@ function renderCharts(data) {
                 const nextDate = new Date(lastDate);
                 nextDate.setDate(lastDate.getDate() + i);
                 projectionLabels.push(nextDate.toISOString().split('T')[0]);
-                projectionData.push(lastAvg); // Projeta a última média
+                projectionData.push(lastAvg);
             }
         }
 
@@ -287,7 +286,7 @@ function renderCharts(data) {
             data: {
                 labels: projectionLabels,
                 datasets: [{
-                    label: 'Projeção de Vendas (R$)', // Rótulo atualizado
+                    label: 'Projeção de Vendas (R$)',
                     data: projectionData,
                     backgroundColor: 'rgba(0, 72, 18, 0.6)',
                     borderColor: 'rgb(0, 72, 18)',
@@ -303,13 +302,13 @@ function renderCharts(data) {
                         beginAtZero: true,
                         ticks: { 
                             stepSize: 1,
-                            callback: function(value) { // Formatação para moeda
+                            callback: function(value) {
                                 return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
                             }
                         }
                     }
                 },
-                tooltip: { // Formatação do tooltip
+                tooltip: {
                     callbacks: {
                         label: function(context) {
                             let label = context.dataset.label || '';
@@ -336,7 +335,7 @@ function populateFilterDropdown(filterType) {
         return;
     }
 
-    dropdown.innerHTML = '<option value="">Escolha uma opção...</option>'; // Limpa e adiciona opção padrão
+    dropdown.innerHTML = '<option value="">Escolha uma opção...</option>';
 
     if (filterType === 'all') {
         dropdown.classList.add('hidden');
@@ -344,7 +343,7 @@ function populateFilterDropdown(filterType) {
         return;
     }
 
-    dropdown.classList.remove('hidden'); // Garante que o dropdown esteja visível
+    dropdown.classList.remove('hidden');
     console.log("Dropdown 'Selecione:' está visível (classe 'hidden' removida).");
 
     let fieldName = '';
