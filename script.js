@@ -97,31 +97,36 @@ function parseCSV(csv) {
             }
             row['ParsedDate'] = parsedDate;
 
-            // Converte valores numéricos, tratando vírgula como separador decimal
-            // Garante que os campos existam antes de tentar replace
-            let quantidadeRaw = row['Quantidade'] ? String(row['Quantidade']).replace('.', '').replace(',', '.') : '0';
-            let precoUnitarioRaw = row['Preço Unitário'] ? String(row['Preço Unitário']).replace('R$', '').replace('.', '').replace(',', '.') : '0';
-            let precoTotalRaw = row['Preço Total'] ? String(row['Preço Total']).replace('R$', '').replace('.', '').replace(',', '.') : '0';
+            // --- PARSING ROBUSTO DE NÚMEROS ---
+            // 1. Pega o valor da coluna, garantindo que seja uma string.
+            // 2. Remove "R$" e espaços em branco.
+            // 3. Substitui pontos de milhar por vazio e vírgula decimal por ponto.
+            // 4. Converte para float/int. Se for NaN, usa um valor padrão.
 
-            row['Quantidade'] = parseFloat(quantidadeRaw);
-            row['Preço Unitário'] = parseFloat(precoUnitarioRaw);
-            row['Preço Total'] = parseFloat(precoTotalRaw);
+            // Preço Unitário
+            let precoUnitarioRaw = String(row['Preço']).replace('R$', '').trim();
+            precoUnitarioRaw = precoUnitarioRaw.replace(/\./g, '').replace(',', '.');
+            let precoUnitario = parseFloat(precoUnitarioRaw);
+            if (isNaN(precoUnitario)) {
+                console.warn(`Linha ${i + 1} (preço unitário): Preço unitário inválido: '${row['Preço']}'. Usando 0.`);
+                invalidPriceCount++;
+                precoUnitario = 0;
+            }
+            row['Preço Unitário'] = precoUnitario;
 
-            if (isNaN(row['Quantidade'])) {
-                console.warn(`Linha ${i + 1} (quantidade): Quantidade inválida: '${quantidadeRaw}'. Usando 0.`);
+            // Quantidade
+            let quantidadeRaw = String(row['Quantidade']).trim();
+            quantidadeRaw = quantidadeRaw.replace(/\./g, '').replace(',', '.'); // Permite vírgula como decimal para float, mas será parseInt
+            let quantidade = parseInt(quantidadeRaw);
+            if (isNaN(quantidade)) {
+                console.warn(`Linha ${i + 1} (quantidade): Quantidade inválida: '${row['Quantidade']}'. Usando 1.`);
                 invalidQuantityCount++;
-                row['Quantidade'] = 0;
+                quantidade = 1; // Quantidade padrão 1
             }
-            if (isNaN(row['Preço Unitário'])) {
-                console.warn(`Linha ${i + 1} (preço unitário): Preço unitário inválido: '${precoUnitarioRaw}'. Usando 0.`);
-                invalidPriceCount++;
-                row['Preço Unitário'] = 0;
-            }
-            if (isNaN(row['Preço Total'])) {
-                console.warn(`Linha ${i + 1} (preço total): Preço total inválido: '${precoTotalRaw}'. Usando 0.`);
-                invalidPriceCount++;
-                row['Preço Total'] = 0;
-            }
+            row['Quantidade'] = quantidade;
+
+            // Preço Total (calculado, não lido diretamente do CSV)
+            row['Preço Total'] = precoUnitario * quantidade;
 
             allData.push(row);
         }
@@ -129,7 +134,7 @@ function parseCSV(csv) {
         console.log(`CSV carregado com sucesso: ${allData.length} registros válidos.`);
         if (invalidDateCount > 0) console.warn(`${invalidDateCount} linhas ignoradas devido a datas inválidas.`);
         if (invalidPriceCount > 0) console.warn(`${invalidPriceCount} preços inválidos foram definidos como 0.`);
-        if (invalidQuantityCount > 0) console.warn(`${invalidQuantityCount} quantidades inválidas foram definidas como 0.`);
+        if (invalidQuantityCount > 0) console.warn(`${invalidQuantityCount} quantidades inválidas foram definidas como 1.`);
         if (columnMismatchCount > 0) console.warn(`${columnMismatchCount} linhas ignoradas devido a número incorreto de colunas.`);
 
         if (allData.length === 0) {
@@ -146,7 +151,7 @@ function parseCSV(csv) {
 
     } catch (error) {
         console.error('Erro ao processar dados do CSV:', error);
-        alert('Erro ao processar dados do CSV.');
+        alert('Erro ao processar dados do CSV. Verifique o console para mais detalhes.');
     }
 }
 
@@ -164,7 +169,7 @@ function populateSelect(elementId, values, defaultOptionText) {
     const currentSelection = select.value;
     select.innerHTML = `<option value="all">${defaultOptionText}</option>`;
     values.forEach(value => {
-        const option = document.createElement('option');
+        const option = document.RcreateElement('option');
         option.value = value;
         option.textContent = value;
         select.appendChild(option);
@@ -232,7 +237,10 @@ function updateStats(data) {
     data.forEach(row => {
         productCounts[row['Medicamento']] = (productCounts[row['Medicamento']] || 0) + row['Quantidade'];
     });
-    const topProduct = Object.keys(productCounts).sort((a, b) => productSales[b] - productSales[a])[0] || 'N/A'; // Corrigido para productCounts
+    // CORREÇÃO AQUI: Usar productCounts para ordenar, não productSales
+    const topProduct = Object.keys(productCounts).length > 0
+        ? Object.keys(productCounts).sort((a, b) => productCounts[b] - productCounts[a])[0]
+        : 'N/A';
 
     document.getElementById('totalSales').textContent = formatNumber(totalSales);
     document.getElementById('totalRevenue').textContent = formatCurrency(totalRevenue);
@@ -299,7 +307,7 @@ function renderCharts(data, period) {
     console.log("Valores de Unidades Históricas:", historicalUnitsValues);
 
     // --- Histórico de Vendas ---
-    const historicalCanvas = document.getElementById('historicalChart');
+    const historicalCanvas = document.getElementById('historicalChart'); // ID CORRETO
     if (!historicalCanvas) {
         console.error("Elemento 'historicalChart' não encontrado.");
         return;
@@ -375,7 +383,7 @@ function renderCharts(data, period) {
 
 
     // --- Projeção de Vendas ---
-    const projectionCanvas = document.getElementById('projectionChart');
+    const projectionCanvas = document.getElementById('projectionChart'); // ID CORRETO
     if (!projectionCanvas) {
         console.error("Elemento 'projectionChart' não encontrado.");
         return;
