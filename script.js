@@ -205,6 +205,20 @@ function renderCharts(data) {
                 responsive: true,
                 maintainAspectRatio: false,
                 scales: {
+                    x: {
+                        type: 'time',
+                        time: {
+                            unit: 'day',
+                            tooltipFormat: 'DD/MM/YYYY',
+                            displayFormats: {
+                                day: 'DD/MM'
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Data'
+                        }
+                    },
                     y: {
                         beginAtZero: true,
                         ticks: {
