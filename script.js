@@ -1,3 +1,8 @@
+let allData = [];
+let historicalChart = null;
+let projectionChart = null;
+
+// Carregar CSV do GitHub
 async function loadCSV() {
     try {
         const response = await fetch('vendas_farmacia.csv');
@@ -18,7 +23,6 @@ function parseCSV(csv) {
 
     if (lines.length < 2) {
         console.error('CSV vazio ou inválido');
-        alert('Arquivo CSV vazio ou inválido.');
         return;
     }
 
@@ -28,11 +32,10 @@ function parseCSV(csv) {
 
     const headers = lines[0].split(separator).map(h => h.trim().replace(/"/g, ''));
 
-    // Limpa allData antes de preencher
     allData = [];
 
     for (let i = 1; i < lines.length; i++) {
-        if (!lines[i].trim()) continue; // Pula linhas vazias
+        if (!lines[i].trim()) continue;
 
         const values = lines[i].split(separator).map(v => v.trim().replace(/"/g, ''));
         const row = {};
@@ -54,7 +57,7 @@ function parseCSV(csv) {
 
     updateDashboard(allData);
 
-    // Inicializa o dropdown apenas se o elemento existir
+    // Inicializa o dropdown
     const filterTypeElement = document.getElementById('filterType');
     if (filterTypeElement) {
         populateFilterDropdown(filterTypeElement.value);
@@ -81,7 +84,6 @@ function updateStats(data) {
     const totalRevenue = data.reduce((sum, row) => {
         if (!row.preco) return sum;
 
-        // Remove "R$", "R$ ", espaços e substitui vírgula por ponto
         const cleanPrice = row.preco.replace(/R\$\s*/g, '').replace(/\s/g, '').replace(',', '.');
         const price = parseFloat(cleanPrice);
 
@@ -101,23 +103,17 @@ function updateStats(data) {
         ? Object.keys(products).reduce((a, b) => products[a] > products[b] ? a : b)
         : '-';
 
-    // Atualiza os elementos HTML
-    const totalSalesEl = document.getElementById('totalSales');
-    const totalRevenueEl = document.getElementById('totalRevenue');
-    const avgTicketEl = document.getElementById('avgTicket');
-    const topProductEl = document.getElementById('topProduct');
-
-    if (totalSalesEl) totalSalesEl.textContent = totalSales;
-    if (totalRevenueEl) totalRevenueEl.textContent = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalRevenue);
-    if (avgTicketEl) avgTicketEl.textContent = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(avgTicket);
-    if (topProductEl) topProductEl.textContent = topProduct;
+    document.getElementById('totalSales').textContent = totalSales;
+    document.getElementById('totalRevenue').textContent = 
+        new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalRevenue);
+    document.getElementById('avgTicket').textContent = 
+        new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(avgTicket);
+    document.getElementById('topProduct').textContent = topProduct;
 }
 
 // Renderizar tabela
 function renderTable(data) {
     const tbody = document.getElementById('tableBody');
-    if (!tbody) return;
-
     tbody.innerHTML = '';
 
     data.forEach(row => {
@@ -136,73 +132,58 @@ function renderTable(data) {
 
 // Renderizar gráficos
 function renderCharts(data) {
-    const byDate = {};
+    const salesByDate = {};
 
     data.forEach(row => {
-        if (!row.data_venda) return;
-
-        if (!byDate[row.data_venda]) {
-            byDate[row.data_venda] = { count: 0, revenue: 0 };
-        }
-
-        byDate[row.data_venda].count++;
-
-        if (row.preco) {
-            const cleanPrice = row.preco.replace(/R\$\s*/g, '').replace(/\s/g, '').replace(',', '.');
-            const price = parseFloat(cleanPrice);
-            byDate[row.data_venda].revenue += isNaN(price) ? 0 : price;
-        }
+        const date = row.data_venda || 'Sem data';
+        salesByDate[date] = (salesByDate[date] || 0) + 1;
     });
 
-    const dates = Object.keys(byDate).sort();
-    const counts = dates.map(d => byDate[d].count);
+    const sortedDates = Object.keys(salesByDate).sort();
+    const historicalLabels = sortedDates;
+    const historicalData = sortedDates.map(date => salesByDate[date]);
 
     // Gráfico Histórico
     const ctx1 = document.getElementById('historicalChart');
     if (ctx1) {
         if (historicalChart) historicalChart.destroy();
 
-        historicalChart = new Chart(ctx1.getContext('2d'), {
+        historicalChart = new Chart(ctx1, {
             type: 'line',
             data: {
-                labels: dates,
+                labels: historicalLabels,
                 datasets: [{
-                    label: 'Vendas por Dia',
-                    data: counts,
+                    label: 'Vendas Diárias',
+                    data: historicalData,
+                    backgroundColor: 'rgba(0, 72, 18, 0.2)',
                     borderColor: 'rgb(0, 72, 18)',
-                    backgroundColor: 'rgba(0, 72, 18, 0.1)',
-                    tension: 0.3,
-                    fill: true
+                    borderWidth: 2,
+                    tension: 0.4
                 }]
             },
-            options: { 
-                responsive: true, 
+            options: {
+                responsive: true,
                 maintainAspectRatio: true,
-                plugins: { legend: { position: 'top' } } 
+                plugins: { legend: { position: 'top' } }
             }
         });
     }
 
+    // Projeção (média dos últimos 7 dias)
+    const lastSevenDays = historicalData.slice(-7);
+    const avgSales = lastSevenDays.length > 0 
+        ? lastSevenDays.reduce((a, b) => a + b, 0) / lastSevenDays.length 
+        : 0;
+
+    const projectionLabels = ['Dia 1', 'Dia 2', 'Dia 3', 'Dia 4', 'Dia 5', 'Dia 6', 'Dia 7'];
+    const projectionData = Array(7).fill(Math.round(avgSales));
+
     // Gráfico de Projeção
-    const avgSales = counts.length > 0 ? counts.reduce((a, b) => a + b, 0) / counts.length : 0;
-    const projectionDays = 7;
-    const projectionLabels = [];
-    const projectionData = [];
-
-    const lastDate = dates.length > 0 ? new Date(dates[dates.length - 1]) : new Date();
-
-    for (let i = 1; i <= projectionDays; i++) {
-        const nextDate = new Date(lastDate);
-        nextDate.setDate(nextDate.getDate() + i);
-        projectionLabels.push(nextDate.toLocaleDateString('pt-BR'));
-        projectionData.push(Math.round(avgSales * (0.95 + Math.random() * 0.1)));
-    }
-
     const ctx2 = document.getElementById('projectionChart');
     if (ctx2) {
         if (projectionChart) projectionChart.destroy();
 
-        projectionChart = new Chart(ctx2.getContext('2d'), {
+        projectionChart = new Chart(ctx2, {
             type: 'bar',
             data: {
                 labels: projectionLabels,
@@ -214,10 +195,10 @@ function renderCharts(data) {
                     borderWidth: 1
                 }]
             },
-            options: { 
+            options: {
                 responsive: true,
                 maintainAspectRatio: true,
-                plugins: { legend: { position: 'top' } } 
+                plugins: { legend: { position: 'top' } }
             }
         });
     }
@@ -227,7 +208,6 @@ function renderCharts(data) {
 function populateFilterDropdown(filterType) {
     const dropdown = document.getElementById('filterValue');
 
-    // Verifica se o elemento existe antes de tentar acessá-lo
     if (!dropdown) {
         console.error('Elemento filterValue não encontrado');
         return;
@@ -252,7 +232,6 @@ function populateFilterDropdown(filterType) {
     const field = fieldMap[filterType];
 
     if (!field || allData.length === 0) {
-        console.warn('Campo não encontrado ou allData vazio');
         return;
     }
 
@@ -262,8 +241,6 @@ function populateFilterDropdown(filterType) {
             .filter(value => value && value.trim() !== '')
     )].sort();
 
-    console.log(`Valores únicos para ${filterType}:`, uniqueValues);
-
     uniqueValues.forEach(value => {
         const option = document.createElement('option');
         option.value = value;
@@ -272,7 +249,20 @@ function populateFilterDropdown(filterType) {
     });
 }
 
-// Event Listeners
+// Atualizar data
+function updateCurrentDate() {
+    const currentDateEl = document.getElementById('currentDate');
+    if (currentDateEl) {
+        const now = new Date();
+        currentDateEl.textContent = now.toLocaleDateString('pt-BR', {
+            day: '2-digit',
+            month: 'long',
+            year: 'numeric'
+        });
+    }
+}
+
+// Inicialização - TODOS os Event Listeners dentro do DOMContentLoaded
 document.addEventListener('DOMContentLoaded', () => {
     // Carrega o CSV
     loadCSV();
@@ -327,16 +317,3 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
-
-// Atualizar data
-function updateCurrentDate() {
-    const currentDateEl = document.getElementById('currentDate');
-    if (currentDateEl) {
-        const now = new Date();
-        currentDateEl.textContent = now.toLocaleDateString('pt-BR', { 
-            day: '2-digit', 
-            month: 'long', 
-            year: 'numeric' 
-        });
-    }
-}
