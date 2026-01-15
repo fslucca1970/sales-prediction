@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard de Vendas Farmacêuticas</title>
     <link rel="stylesheet" href="style.css">
-    <!-- Removido Chart.js e adapter, pois não usaremos gráficos -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
 </head>
 <body>
     <header>
@@ -39,9 +40,16 @@
                     <option value="all">Todos os Vendedores</option>
                 </select>
             </div>
+            <div class="filter-group">
+                <label for="filterPeriodo">Período:</label>
+                <select id="filterPeriodo">
+                    <option value="daily">Diário</option>
+                    <option value="weekly">Semanal</option>
+                    <option value="monthly">Mensal</option>
+                </select>
+            </div>
             <button id="clearBtn" class="btn-clear">Limpar Filtros</button>
         </section>
-
         <!-- Cards de Estatísticas -->
         <section class="stats">
             <div class="stat-card">
@@ -54,18 +62,35 @@
             </div>
             <div class="stat-card">
                 <h3>Ticket Médio</h3>
-                <p id="averageTicket">R$ 0,00</p>
+                <p id="avgTicket">R$ 0,00</p>
             </div>
             <div class="stat-card">
                 <h3>Produto Top</h3>
-                <p id="topProduct">N/A</p>
+                <p id="topProduct">-</p>
             </div>
             <div class="stat-card">
                 <h3>Total de Unidades</h3>
                 <p id="totalUnits">0</p>
             </div>
         </section>
-
+        <!-- Gráficos -->
+        <section class="charts">
+            <div class="chart-container">
+                <h3>📊 Histórico de Vendas</h3>
+                <canvas id="historicalChart"></canvas> 
+            </div>
+            <div class="chart-container">
+                <h3>🔮 Projeção de Vendas</h3>
+                <div class="filter-group" style="margin-bottom: 15px;">
+                    <label for="projectionMetric">Métrica da Projeção:</label>
+                    <select id="projectionMetric">
+                        <option value="revenue">Receita (R$)</option>
+                        <option value="units">Unidades</option>
+                    </select>
+                </div>
+                <canvas id="projectionChart"></canvas> 
+            </div>
+        </section>
         <!-- Tabela de Detalhamento -->
         <section class="table-section">
             <h3 id="tableTitle">📋 Detalhamento Diário (Máximo 500 linhas)</h3>
