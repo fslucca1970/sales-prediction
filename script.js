@@ -527,9 +527,9 @@ document.addEventListener('DOMContentLoaded', function() {
         applyFilters(); // Re-aplica os filtros para atualizar o dashboard com o novo período
     });
 
-    // NOVO: Event Listener para o seletor de métrica da projeção
+    // AQUI ESTÁ O EVENT LISTENER QUE FALTAVA!
     document.getElementById('projectionMetric').addEventListener('change', function() {
-        applyFilters(); // Re-aplica os filtros para atualizar apenas o gráfico de projeção
+        applyFilters(); // Re-aplica os filtros para atualizar o dashboard, o que vai redesenhar o gráfico de projeção com a nova métrica
     });
 
     document.getElementById('clearBtn').addEventListener('click', function() {
@@ -583,4 +583,3 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 });
-
