@@ -173,8 +173,15 @@ function updateStats(data) {
 
 // Renderizar Gráficos
 function renderCharts(data) {
-    if (historicalChart) historicalChart.destroy();
-    if (projectionChart) projectionChart.destroy();
+    // Destruir gráficos existentes antes de criar novos
+    if (historicalChart) {
+        historicalChart.destroy();
+        historicalChart = null;
+    }
+    if (projectionChart) {
+        projectionChart.destroy();
+        projectionChart = null;
+    }
 
     const dailySales = {};
     data.forEach(row => {
@@ -221,6 +228,10 @@ function renderCharts(data) {
                     },
                     y: {
                         beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Receita (R$)'
+                        },
                         ticks: {
                             callback: function(value) {
                                 return formatCurrency(value);
@@ -289,6 +300,10 @@ function renderCharts(data) {
                     },
                     y: {
                         beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Receita (R$)'
+                        },
                         ticks: {
                             callback: function(value) {
                                 return formatCurrency(value);
