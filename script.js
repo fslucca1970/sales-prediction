@@ -103,12 +103,12 @@ function parseCSV(csv) {
             // 3. Substitui pontos de milhar por vazio e vírgula decimal por ponto.
             // 4. Converte para float/int. Se for NaN, usa um valor padrão.
 
-            // Preço Unitário
-            let precoUnitarioRaw = String(row['Preço']).replace('R$', '').trim();
+            // Preço Unitário (CORRIGIDO: Acessando 'Preço Unitário' em vez de 'Preço')
+            let precoUnitarioRaw = String(row['Preço Unitário']).replace('R$', '').trim();
             precoUnitarioRaw = precoUnitarioRaw.replace(/\./g, '').replace(',', '.');
             let precoUnitario = parseFloat(precoUnitarioRaw);
             if (isNaN(precoUnitario)) {
-                console.warn(`Linha ${i + 1} (preço unitário): Preço unitário inválido: '${row['Preço']}'. Usando 0.`);
+                console.warn(`Linha ${i + 1} (preço unitário): Preço unitário inválido: '${row['Preço Unitário']}'. Usando 0.`);
                 invalidPriceCount++;
                 precoUnitario = 0;
             }
