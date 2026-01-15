@@ -97,31 +97,27 @@ function parseCSV(csv) {
             }
             row['ParsedDate'] = parsedDate;
 
-            // Converte valores numéricos, tratando vírgula como separador decimal
-            // Garante que os campos existam antes de tentar replace
-            let quantidadeRaw = row['Quantidade'] ? row['Quantidade'].replace('.', '').replace(',', '.') : '0';
-            let precoUnitarioRaw = row['Preço Unitário'] ? row['Preço Unitário'].replace('R$', '').replace('.', '').replace(',', '.') : '0';
-            let precoTotalRaw = row['Preço Total'] ? row['Preço Total'].replace('R$', '').replace('.', '').replace(',', '.') : '0';
+            // Tratamento de Preço Unitário
+            let precoUnitarioRaw = row['Preço'] ? row['Preço'].replace('R$', '').replace(/\./g, '').replace(',', '.') : '0';
+            let precoUnitario = parseFloat(precoUnitarioRaw);
+            if (isNaN(precoUnitario)) {
+                console.warn(`Linha ${i + 1} (preço unitário): Preço unitário inválido: '${row['Preço']}'. Usando 0.`);
+                invalidPriceCount++;
+                precoUnitario = 0;
+            }
+            row['Preço Unitário'] = precoUnitario;
 
-            row['Quantidade'] = parseFloat(quantidadeRaw);
-            row['Preço Unitário'] = parseFloat(precoUnitarioRaw);
-            row['Preço Total'] = parseFloat(precoTotalRaw);
-
-            if (isNaN(row['Quantidade'])) {
-                console.warn(`Linha ${i + 1} (quantidade): Quantidade inválida: '${quantidadeRaw}'. Usando 0.`);
+            // Tratamento de Quantidade
+            let quantidadeRaw = row['Quantidade'] ? row['Quantidade'].replace(/\./g, '').replace(',', '.') : '0';
+            let quantidade = parseInt(quantidadeRaw);
+            if (isNaN(quantidade)) {
+                console.warn(`Linha ${i + 1} (quantidade): Quantidade inválida: '${row['Quantidade']}'. Usando 1.`);
                 invalidQuantityCount++;
-                row['Quantidade'] = 0;
+                quantidade = 1;
             }
-            if (isNaN(row['Preço Unitário'])) {
-                console.warn(`Linha ${i + 1} (preço unitário): Preço unitário inválido: '${precoUnitarioRaw}'. Usando 0.`);
-                invalidPriceCount++;
-                row['Preço Unitário'] = 0;
-            }
-            if (isNaN(row['Preço Total'])) {
-                console.warn(`Linha ${i + 1} (preço total): Preço total inválido: '${precoTotalRaw}'. Usando 0.`);
-                invalidPriceCount++;
-                row['Preço Total'] = 0;
-            }
+            row['Quantidade'] = quantidade;
+
+            row['Preço Total'] = precoUnitario * quantidade;
 
             allData.push(row);
         }
@@ -129,7 +125,7 @@ function parseCSV(csv) {
         console.log(`CSV carregado com sucesso: ${allData.length} registros válidos.`);
         if (invalidDateCount > 0) console.warn(`${invalidDateCount} linhas ignoradas devido a datas inválidas.`);
         if (invalidPriceCount > 0) console.warn(`${invalidPriceCount} preços inválidos foram definidos como 0.`);
-        if (invalidQuantityCount > 0) console.warn(`${invalidQuantityCount} quantidades inválidas foram definidas como 0.`);
+        if (invalidQuantityCount > 0) console.warn(`${invalidQuantityCount} quantidades inválidas foram definidas como 1.`);
         if (columnMismatchCount > 0) console.warn(`${columnMismatchCount} linhas ignoradas devido a número incorreto de colunas.`);
 
         if (allData.length === 0) {
@@ -146,7 +142,7 @@ function parseCSV(csv) {
 
     } catch (error) {
         console.error('Erro ao processar dados do CSV:', error);
-        alert('Erro ao processar dados do CSV.');
+        alert('Erro ao processar dados do CSV. Verifique o console para mais detalhes.');
     }
 }
 
@@ -264,7 +260,12 @@ function aggregateDataByPeriod(data, period) {
                 date: key,
                 periodoDisplay: (period === 'daily' ? date.toLocaleDateString('pt-BR') : 
                                  period === 'weekly' ? `Semana de ${new Date(key).toLocaleDateString('pt-BR')}` :
-                                 new Date(key + '-01').toLocaleDateString(),
+                                 new Date(key + '-01').toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })),
+                revenue: 0,
+                units: 0,
+                medicamentos: new Set(),
+                categorias: new Set(),
+                cidades: new Set(),
                 vendedores: new Set(),
                 originalRows: []
             };
@@ -294,7 +295,7 @@ function renderCharts(data, period) {
     console.log("Valores de Unidades Históricas:", historicalUnitsValues);
 
     // --- Histórico de Vendas ---
-    const historicalCanvas = document.getElementById('historicalChart'); // Corrigido ID
+    const historicalCanvas = document.getElementById('historicalChart'); // ID correto
     if (!historicalCanvas) {
         console.error("Elemento 'historicalChart' não encontrado.");
         return;
@@ -306,7 +307,7 @@ function renderCharts(data, period) {
 
     if (labels.length > 0 && historicalRevenueValues.length > 0) {
         historicalChart = new Chart(ctxHistorical, {
-            type: 'bar',
+            type: 'bar', // Pode ser 'line' ou 'bar'
             data: {
                 labels: labels,
                 datasets: [{
@@ -566,7 +567,6 @@ function updateTable(originalFilteredData, groupedData, period) {
                 <td>${row['Medicamento']}</td>
                 <td>${row['Categoria']}</td>
                 <td>${formatNumber(row['Quantidade'])}</td>
-                <td>${formatCurrency(row['Preço Unitário'])}</td>
                 <td>${formatCurrency(row['Preço Total'])}</td>
                 <td>${row['Cidade']}</td>
                 <td>${row['Vendedor']}</td>
@@ -654,4 +654,3 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('projectionMetric').addEventListener('change', applyFilters);
     document.getElementById('clearBtn').addEventListener('click', clearFilters);
 });
-  
