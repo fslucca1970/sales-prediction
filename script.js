@@ -13,7 +13,7 @@ const formatNumber = (value) => {
     return new Intl.NumberFormat('pt-BR').format(value);
 };
 
-// Função auxiliar para parsear data DD/MM/YYYY de forma robusta
+// Função auxiliar para parsear data. Agora, espera YYYY-MM-DD diretamente.
 function parseDateString(dateString) {
     // Tenta criar a data diretamente. Se o formato for YYYY-MM-DD, o construtor Date geralmente funciona bem.
     const date = new Date(dateString);
