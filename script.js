@@ -48,13 +48,10 @@ function parseCSV(csv) {
                 row[header] = values[index] || '';
             });
 
-            // --- CORREÇÃO AQUI: Ajustar o parsing do Preço para o formato "X.YY" ---
+            // --- CORREÇÃO AQUI: Ajustar o parsing do Preço para o formato "X,YY" ---
             let rawPrice = row['Preço'].replace('R$', '').trim();
-            // Se o formato é R$ 8.50 (oito e cinquenta), o ponto já é o decimal.
-            // Apenas precisamos garantir que não haja outros pontos ou vírgulas inesperadas.
-            // Para o formato R$ X.YY, parseFloat já deve funcionar se o ponto for o decimal.
-            // Se houver R$ X.XXX.YY (ponto milhar e ponto decimal), a lógica seria mais complexa.
-            // Pelo seu print, parece ser R$ X.YY (ponto decimal).
+            // Remove o separador de milhares (ponto) e substitui a vírgula por ponto decimal
+            rawPrice = rawPrice.replace(/\./g, '').replace(',', '.'); // Esta é a linha crucial!
             let precoUnitario = parseFloat(rawPrice);
             // --- FIM DA CORREÇÃO ---
 
@@ -212,7 +209,7 @@ function updateCharts(data) {
     // Gráfico Projeção (média móvel simples)
     const projectionDays = 7;
     const lastRevenues = revenues.slice(-projectionDays);
-    const avgRevenue = lastRevenues.reduce((a, b) => a + b, 0) / lastRevenues.length;
+    const avgRevenue = lastRevenues.length > 0 ? lastRevenues.reduce((a, b) => a + b, 0) / lastRevenues.length : 0;
 
     const projectionLabels = [];
     const projectionData = [];
@@ -225,5 +222,151 @@ function updateCharts(data) {
     }
 
     const ctxProjection = document.getElementById('projectionChart');
-    if (
+    if (projectionChart) projectionChart.destroy();
 
+    projectionChart = new Chart(ctxProjection, {
+        type: 'bar',
+        data: {
+            labels: projectionLabels,
+            datasets: [{
+                label: 'Projeção de Receita',
+                data: projectionData,
+                backgroundColor: 'rgba(0, 72, 72, 0.6)',
+                borderColor: 'rgb(0, 72, 72)',
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    display: true
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return 'Projeção: ' + formatCurrency(context.parsed.y);
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return formatCurrency(value);
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function updateTable(data) {
+    const tbody = document.getElementById('salesTableBody');
+    tbody.innerHTML = '';
+
+    const limitedData = data.slice(0, 500);
+
+    limitedData.forEach(row => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${row['Data']}</td>
+            <td>${row['Medicamento']}</td>
+            <td>${row['Categoria']}</td>
+            <td>${row['Quantidade']}</td>
+            <td>${formatCurrency(row['Preço Unitário'])}</td>
+            <td>${formatCurrency(row['Preço Total'])}</td>
+            <td>${row['Cidade']}</td>
+            <td>${row['Vendedor']}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadCSV();
+
+    document.getElementById('filterCidade').addEventListener('change', function() {
+        let filtered = allData;
+
+        if (this.value !== 'all') {
+            filtered = filtered.filter(row => row['Cidade'] === this.value);
+        }
+
+        const categorias = getUniqueValues(filtered, 'Categoria');
+        populateSelect('filterCategoria', categorias, 'Todas as Categorias');
+        document.getElementById('filterCategoria').disabled = (categorias.length === 0);
+
+        document.getElementById('filterMedicamento').innerHTML = '<option value="all">Todos os Medicamentos</option>';
+        document.getElementById('filterMedicamento').disabled = true;
+        document.getElementById('filterVendedor').innerHTML = '<option value="all">Todos os Vendedores</option>';
+        document.getElementById('filterVendedor').disabled = true;
+
+        applyFilters();
+    });
+
+    document.getElementById('filterCategoria').addEventListener('change', function() {
+        const cidade = document.getElementById('filterCidade').value;
+        let filtered = allData;
+
+        if (cidade !== 'all') {
+            filtered = filtered.filter(row => row['Cidade'] === cidade);
+        }
+        if (this.value !== 'all') {
+            filtered = filtered.filter(row => row['Categoria'] === this.value);
+        }
+
+        const medicamentos = getUniqueValues(filtered, 'Medicamento');
+        populateSelect('filterMedicamento', medicamentos, 'Todos os Medicamentos');
+        document.getElementById('filterMedicamento').disabled = (medicamentos.length === 0);
+
+        document.getElementById('filterVendedor').innerHTML = '<option value="all">Todos os Vendedores</option>';
+        document.getElementById('filterVendedor').disabled = true;
+
+        applyFilters();
+    });
+
+    document.getElementById('filterMedicamento').addEventListener('change', function() {
+        const cidade = document.getElementById('filterCidade').value;
+        const categoria = document.getElementById('filterCategoria').value;
+        let filtered = allData;
+
+        if (cidade !== 'all') {
+            filtered = filtered.filter(row => row['Cidade'] === cidade);
+        }
+        if (categoria !== 'all') {
+            filtered = filtered.filter(row => row['Categoria'] === categoria);
+        }
+        if (this.value !== 'all') {
+            filtered = filtered.filter(row => row['Medicamento'] === this.value);
+        }
+
+        const vendedores = getUniqueValues(filtered, 'Vendedor');
+        populateSelect('filterVendedor', vendedores, 'Todos os Vendedores');
+        document.getElementById('filterVendedor').disabled = (vendedores.length === 0);
+
+        applyFilters();
+    });
+
+    document.getElementById('filterVendedor').addEventListener('change', function() {
+        applyFilters();
+    });
+
+    document.getElementById('clearBtn').addEventListener('click', function() {
+        document.getElementById('filterCidade').value = 'all';
+        document.getElementById('filterCategoria').value = 'all';
+        document.getElementById('filterMedicamento').value = 'all';
+        document.getElementById('filterVendedor').value = 'all';
+
+        document.getElementById('filterCategoria').disabled = true;
+        document.getElementById('filterMedicamento').disabled = true;
+        document.getElementById('filterVendedor').disabled = true;
+
+        initializeFilters(); 
+        updateDashboard(allData);
+    });
+});
