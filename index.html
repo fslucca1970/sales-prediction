@@ -13,7 +13,6 @@
         <h1>💊 Dashboard de Vendas Farmacêuticas</h1>
         <p>Histórico + Projeções - AGILLE AI</p>
     </header>
-
     <main>
         <!-- Filtros -->
         <section class="filters">
@@ -23,28 +22,24 @@
                     <option value="all">Todas as Cidades</option>
                 </select>
             </div>
-
             <div class="filter-group">
                 <label for="filterCategoria">Categoria:</label>
-                <select id="filterCategoria" disabled>
+                <select id="filterCategoria">
                     <option value="all">Todas as Categorias</option>
                 </select>
             </div>
-
             <div class="filter-group">
                 <label for="filterMedicamento">Medicamento:</label>
-                <select id="filterMedicamento" disabled>
+                <select id="filterMedicamento">
                     <option value="all">Todos os Medicamentos</option>
                 </select>
             </div>
-
             <div class="filter-group">
                 <label for="filterVendedor">Vendedor:</label>
-                <select id="filterVendedor" disabled>
+                <select id="filterVendedor">
                     <option value="all">Todos os Vendedores</option>
                 </select>
             </div>
-
             <div class="filter-group">
                 <label for="filterPeriodo">Período:</label>
                 <select id="filterPeriodo">
@@ -53,10 +48,8 @@
                     <option value="monthly">Mensal</option>
                 </select>
             </div>
-
             <button id="clearBtn" class="btn-clear">Limpar Filtros</button>
         </section>
-
         <!-- Cards de Estatísticas -->
         <section class="stats">
             <div class="stat-card">
@@ -75,13 +68,16 @@
                 <h3>Produto Top</h3>
                 <p id="topProduct">-</p>
             </div>
+            <div class="stat-card">
+                <h3>Total de Unidades</h3>
+                <p id="totalUnits">0</p>
+            </div>
         </section>
-
         <!-- Gráficos -->
         <section class="charts">
             <div class="chart-container">
                 <h3>📊 Histórico de Vendas</h3>
-                <canvas id="historicalChart"></canvas>
+                <canvas id="historicalChart"></canvas> 
             </div>
             <div class="chart-container">
                 <h3>🔮 Projeção de Vendas</h3>
@@ -92,10 +88,9 @@
                         <option value="units">Unidades</option>
                     </select>
                 </div>
-                <canvas id="projectionChart"></canvas>
+                <canvas id="projectionChart"></canvas> 
             </div>
         </section>
-
         <!-- Tabela de Detalhamento -->
         <section class="table-section">
             <h3 id="tableTitle">📋 Detalhamento Diário (Máximo 500 linhas)</h3>
@@ -120,7 +115,6 @@
             </div>
         </section>
     </main>
-
     <footer>
         <p>Última atualização: <span id="lastUpdateDate">-</span></p>
     </footer>
