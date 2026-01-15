@@ -109,6 +109,7 @@ function populateSelect(selectId, values, defaultText) {
         option.textContent = value;
         select.appendChild(option);
     });
+    select.disabled = (values.length === 0); // Desabilita se não houver opções além da padrão
 }
 
 // Aplicar filtros
@@ -333,7 +334,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const categorias = getUniqueValues(filtered, 'Categoria');
         populateSelect('filterCategoria', categorias, 'Todas as Categorias');
-        document.getElementById('filterCategoria').disabled = false;
+        document.getElementById('filterCategoria').disabled = (categorias.length === 0);
 
         document.getElementById('filterMedicamento').innerHTML = '<option value="all">Todos os Medicamentos</option>';
         document.getElementById('filterMedicamento').disabled = true;
@@ -357,7 +358,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const medicamentos = getUniqueValues(filtered, 'Medicamento');
         populateSelect('filterMedicamento', medicamentos, 'Todos os Medicamentos');
-        document.getElementById('filterMedicamento').disabled = false;
+        document.getElementById('filterMedicamento').disabled = (medicamentos.length === 0);
 
         document.getElementById('filterVendedor').innerHTML = '<option value="all">Todos os Vendedores</option>';
         document.getElementById('filterVendedor').disabled = true;
@@ -383,7 +384,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const vendedores = getUniqueValues(filtered, 'Vendedor');
         populateSelect('filterVendedor', vendedores, 'Todos os Vendedores');
-        document.getElementById('filterVendedor').disabled = false;
+        document.getElementById('filterVendedor').disabled = (vendedores.length === 0);
 
         applyFilters();
     });
@@ -404,6 +405,8 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('filterMedicamento').disabled = true;
         document.getElementById('filterVendedor').disabled = true;
 
+        // Re-inicializa os filtros para garantir que a Cidade seja populada
+        initializeFilters(); 
         updateDashboard(allData);
     });
 });
