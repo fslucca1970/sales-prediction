@@ -33,7 +33,7 @@ function parseCSV(csv) {
         const separator = firstLine.includes('\t') ? '\t' : ',';
 
         const headers = lines[0].split(separator).map(h => h.trim().replace(/"/g, ''));
-        console.log("Cabeçalhos do CSV:", headers);
+        console.log("Cabeçalhos do CSV lidos:", headers); // Log para verificar os cabeçalhos lidos
 
         allData = [];
 
@@ -53,7 +53,7 @@ function parseCSV(csv) {
         console.log("Dados carregados (allData):", allData);
         console.log("Total de registros:", allData.length);
         if (allData.length > 0) {
-            console.log("Primeira linha de dados:", allData[0]);
+            console.log("Primeira linha de dados (objeto):", allData[0]); // Log para verificar o objeto da primeira linha
         }
 
         if (allData.length === 0) {
@@ -101,7 +101,7 @@ function updateStats(data) {
     const totalSales = data.length;
 
     const totalRevenue = data.reduce((sum, row) => {
-        if (!row.Preço) return sum;
+        if (!row.Preço) return sum; // Usando 'Preço'
 
         const priceStr = row.Preço.toString().replace(/R\$\s*/g, '').replace(/\s/g, '').replace(',', '.');
         const price = parseFloat(priceStr);
@@ -281,7 +281,7 @@ function renderCharts(data) {
 
 // Preencher dropdown de filtro dinamicamente
 function populateFilterDropdown(filterType) {
-    const dropdown = document.getElementById('filterValue'); // <--- CORRIGIDO AQUI!
+    const dropdown = document.getElementById('filterValue');
     if (!dropdown) {
         console.error('Elemento filterValue não encontrado.');
         return;
@@ -300,16 +300,16 @@ function populateFilterDropdown(filterType) {
 
     switch (filterType) {
         case 'medicamento':
-            fieldName = 'Medicamento';
+            fieldName = 'Medicamento'; // Usando 'Medicamento'
             break;
         case 'cidade':
-            fieldName = 'Cidade';
+            fieldName = 'Cidade';       // Usando 'Cidade'
             break;
         case 'categoria':
             fieldName = 'Categoria';
             break;
         case 'vendedor':
-            fieldName = 'Vendedor';
+            fieldName = 'Vendedor';     // Usando 'Vendedor'
             break;
         default:
             dropdown.classList.add('hidden');
@@ -376,16 +376,16 @@ document.addEventListener('DOMContentLoaded', () => {
             let field = '';
             switch (filterType) {
                 case 'medicamento':
-                    field = 'Medicamento';
+                    field = 'Medicamento'; // Usando 'Medicamento'
                     break;
                 case 'cidade':
-                    field = 'Cidade';
+                    field = 'Cidade';       // Usando 'Cidade'
                     break;
                 case 'categoria':
                     field = 'Categoria';
                     break;
                 case 'vendedor':
-                    field = 'Vendedor';
+                    field = 'Vendedor';     // Usando 'Vendedor'
                     break;
                 default:
                     console.warn('Tipo de filtro desconhecido:', filterType);
