@@ -12,7 +12,6 @@
             <h1>💊 Dashboard de Vendas Farmacêuticas</h1>
             <p class="subtitle">Histórico + Projeções - AGILLE AI</p>
         </header>
-
         <main>
             <div class="filters">
                 <div class="filter-group">
@@ -34,19 +33,16 @@
                 <button id="filterBtn" class="btn-filter">🔍 Filtrar</button>
                 <button id="clearBtn" class="btn-clear">🔄 Limpar Filtro</button>
             </div>
-
             <div class="dashboard">
                 <div class="chart-container">
                     <h2>📈 Histórico de Vendas</h2>
                     <canvas id="historicalChart"></canvas>
                 </div>
-
                 <div class="chart-container">
                     <h2>🔮 Projeção (Próximos 7 dias)</h2>
                     <canvas id="projectionChart"></canvas>
                 </div>
             </div>
-
             <div class="stats-container">
                 <div class="stat-card">
                     <span class="label">Total de Vendas</span>
@@ -65,7 +61,6 @@
                     <span class="value" id="topProduct">-</span>
                 </div>
             </div>
-
             <div class="table-container">
                 <h2>📋 Detalhamento Diário</h2>
                 <table id="dataTable">
@@ -74,22 +69,22 @@
                             <th>Data</th>
                             <th>Medicamento</th>
                             <th>Categoria</th>
+                            <th>Quantidade</th> <!-- NOVA COLUNA -->
+                            <th>Preço Unitário</th> <!-- ALTERADO -->
+                            <th>Preço Total</th> <!-- NOVA COLUNA -->
                             <th>Cidade</th>
                             <th>Vendedor</th>
-                            <th>Preço</th>
                         </tr>
                     </thead>
-                    <tbody id="tableBody">
+                    <tbody id="salesTableBody"> <!-- ID CORRIGIDO AQUI -->
                     </tbody>
                 </table>
             </div>
         </main>
-
         <footer>
             <p>Desenvolvido por AGILLE AI com LLM OpenAI - Atualizado em: <span id="currentDate"></span></p>
         </footer>
     </div>
-
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="script.js"></script>
 </body>
