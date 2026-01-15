@@ -33,7 +33,7 @@ function parseCSV(csv) {
         const separator = firstLine.includes('\t') ? '\t' : ',';
 
         const headers = lines[0].split(separator).map(h => h.trim().replace(/"/g, ''));
-        console.log("Cabeçalhos do CSV lidos:", headers);
+        console.log("Cabeçalhos do CSV lidos:", headers); // Log para verificar os cabeçalhos lidos
 
         allData = [];
 
@@ -47,13 +47,22 @@ function parseCSV(csv) {
                 row[header] = values[index] || '';
             });
 
+            // --- NOVO: Calcular Preço Total e garantir tipos corretos ---
+            const precoUnitarioStr = row.Preço ? row.Preço.replace(/R\$\s*/g, '').replace(/\s/g, '').replace(',', '.') : '0';
+            const precoUnitario = parseFloat(precoUnitarioStr);
+            const quantidade = parseInt(row.Quantidade || '1'); // Assume 1 se Quantidade não estiver presente ou for inválida
+
+            row.PreçoUnitario = precoUnitario; // Armazena o preço unitário como número
+            row.Quantidade = quantidade; // Armazena a quantidade como número
+            row['Preço Total'] = precoUnitario * quantidade; // Calcula e armazena o preço total
+
             allData.push(row);
         }
 
         console.log("Dados carregados (allData):", allData);
         console.log("Total de registros:", allData.length);
         if (allData.length > 0) {
-            console.log("Primeira linha de dados (objeto):", allData[0]);
+            console.log("Primeira linha de dados (objeto):", allData[0]); // Log para verificar o objeto da primeira linha
         }
 
         if (allData.length === 0) {
@@ -64,7 +73,7 @@ function parseCSV(csv) {
         // Atualiza o dashboard com os dados carregados
         updateDashboard(allData);
 
-        // Inicializa o dropdown APÓS o dashboard ser atualizado e o DOM estar pronto
+        // Inicializa o dropdown após um pequeno delay para garantir que o DOM está pronto
         setTimeout(() => {
             const filterTypeElement = document.getElementById('filterType');
             if (filterTypeElement) {
@@ -83,7 +92,7 @@ function updateDashboard(data) {
     // Se não há dados, limpa gráficos e estatísticas
     if (!data || data.length === 0) {
         console.warn('updateDashboard chamado com dados vazios');
-        updateStats([]); 
+        updateStats([]);
         renderTable([]);
         renderCharts([]);
         updateCurrentDate();
@@ -91,7 +100,7 @@ function updateDashboard(data) {
     }
 
     updateStats(data);
-    renderTable(data); // Garante que a tabela seja renderizada
+    renderTable(data);
     renderCharts(data);
     updateCurrentDate();
 }
@@ -100,286 +109,300 @@ function updateDashboard(data) {
 function updateStats(data) {
     const totalSales = data.length;
 
+    // --- ALTERADO: Usar 'Preço Total' para a receita ---
     const totalRevenue = data.reduce((sum, row) => {
-        if (!row.Preço) return sum;
-
-        const priceStr = row.Preço.toString().replace(/R\$\s*/g, '').replace(/\s/g, '').replace(',', '.');
-        const price = parseFloat(priceStr);
-
-        return sum + (isNaN(price) ? 0 : price);
+        return sum + (row['Preço Total'] || 0);
     }, 0);
 
-    const avgTicket = totalSales > 0 ? totalRevenue / totalSales : 0;
+    const averageTicket = totalSales > 0 ? totalRevenue / totalSales : 0;
 
-    const products = {};
-    data.forEach(row => {
-        if (row.Medicamento) {
-            products[row.Medicamento] = (products[row.Medicamento] || 0) + 1;
+    // Produto mais vendido (por quantidade)
+    const productQuantities = data.reduce((acc, row) => {
+        const productName = row.Medicamento;
+        const quantity = row.Quantidade || 0;
+        acc[productName] = (acc[productName] || 0) + quantity;
+        return acc;
+    }, {});
+
+    let topProduct = 'N/A';
+    let maxQuantity = 0;
+    for (const product in productQuantities) {
+        if (productQuantities[product] > maxQuantity) {
+            maxQuantity = productQuantities[product];
+            topProduct = product;
         }
-    });
+    }
 
-    const topProduct = Object.keys(products).length > 0 
-        ? Object.keys(products).reduce((a, b) => products[a] > products[b] ? a : b)
-        : '-';
-
-    const totalSalesEl = document.getElementById('totalSales');
-    const totalRevenueEl = document.getElementById('totalRevenue');
-    const avgTicketEl = document.getElementById('avgTicket');
-    const topProductEl = document.getElementById('topProduct');
-
-    if (totalSalesEl) totalSalesEl.textContent = totalSales;
-    if (totalRevenueEl) totalRevenueEl.textContent = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalRevenue);
-    if (avgTicketEl) avgTicketEl.textContent = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(avgTicket);
-    if (topProductEl) topProductEl.textContent = topProduct;
+    document.getElementById('totalSales').textContent = totalSales;
+    document.getElementById('totalRevenue').textContent = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalRevenue);
+    document.getElementById('averageTicket').textContent = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(averageTicket);
+    document.getElementById('topProduct').textContent = topProduct;
 }
 
 // Renderizar tabela
 function renderTable(data) {
-    const tbody = document.getElementById('tableBody');
-    if (!tbody) {
-        console.error('Elemento tableBody não encontrado');
+    const tableBody = document.getElementById('salesTableBody');
+    if (!tableBody) {
+        console.error("Elemento 'salesTableBody' não encontrado.");
         return;
     }
+    tableBody.innerHTML = ''; // Limpa a tabela antes de preencher
 
-    tbody.innerHTML = ''; // Limpa a tabela antes de preencher
+    // Garante que a tabela seja visível
+    const tableContainer = document.getElementById('dailyDetailTable');
+    if (tableContainer) {
+        tableContainer.classList.remove('hidden');
+    }
 
-    const displayData = data.slice(0, 50); // Limita a 50 linhas para performance
-
-    displayData.forEach(row => {
+    const recordsToShow = Math.min(data.length, 50); // Limita a 50 registros ou menos se houver menos dados
+    for (let i = 0; i < recordsToShow; i++) {
+        const row = data[i];
         const tr = document.createElement('tr');
-
-        // Proteção para row.Preço antes de tentar formatar
-        const precoValue = row.Preço ? parseFloat(row.Preço.toString().replace(/R\$\s*/g, '').replace(/\s/g, '').replace(',', '.')) : 0;
-        const precoFormatado = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(precoValue);
-
         tr.innerHTML = `
-            <td>${row.Data || '-'}</td>
-            <td>${row.Medicamento || '-'}</td>
-            <td>${row.Categoria || '-'}</td>
-            <td>${row.Cidade || '-'}</td>
-            <td>${row.Vendedor || '-'}</td>
-            <td>${precoFormatado}</td>
+            <td>${row.Data || ''}</td>
+            <td>${row.Medicamento || ''}</td>
+            <td>${row.Categoria || ''}</td>
+            <td>${row.Quantidade || 0}</td> <!-- NOVO: Coluna Quantidade -->
+            <td>${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(row.PreçoUnitario || 0)}</td> <!-- Preço Unitário -->
+            <td>${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(row['Preço Total'] || 0)}</td> <!-- NOVO: Preço Total -->
+            <td>${row.Cidade || ''}</td>
+            <td>${row.Vendedor || ''}</td>
         `;
-        tbody.appendChild(tr);
-    });
-    console.log(`Tabela 'Detalhamento Diário' preenchida com ${displayData.length} registros.`);
-    // Adiciona um log para verificar o conteúdo do tbody
-    console.log("Conteúdo do tbody após preenchimento:", tbody.innerHTML);
+        tableBody.appendChild(tr);
+    }
+    console.log(`Tabela 'Detalhamento Diário' preenchida com ${recordsToShow} registros.`);
 }
 
 // Renderizar gráficos
 function renderCharts(data) {
-    // Destrói gráficos existentes para evitar sobreposição
+    const salesByDate = data.reduce((acc, row) => {
+        const date = row.Data;
+        // --- ALTERADO: Usar 'Preço Total' para o valor da venda ---
+        const value = row['Preço Total'] || 0;
+        acc[date] = (acc[date] || 0) + value;
+        return acc;
+    }, {});
+
+    const sortedDates = Object.keys(salesByDate).sort();
+    const chartLabels = sortedDates;
+    const chartData = sortedDates.map(date => salesByDate[date]);
+
+    // Histórico de Vendas
+    const historicalCtx = document.getElementById('historicalSalesChart').getContext('2d');
     if (historicalChart) {
         historicalChart.destroy();
-        historicalChart = null;
     }
-    if (projectionChart) {
-        projectionChart.destroy();
-        projectionChart = null;
-    }
-
-    if (data.length === 0) {
-        // Se não há dados, os gráficos ficam vazios
-        return;
-    }
-
-    // Agrupa vendas por Data
-    const salesByDate = {};
-    data.forEach(row => {
-        const date = row.Data;
-        if (date) {
-            salesByDate[date] = (salesByDate[date] || 0) + 1;
+    historicalChart = new Chart(historicalCtx, {
+        type: 'line',
+        data: {
+            labels: chartLabels,
+            datasets: [{
+                label: 'Vendas Diárias (R$)',
+                data: chartData,
+                borderColor: 'rgb(0, 72, 72)', // Cor da linha
+                backgroundColor: 'rgba(0, 72, 72, 0.2)', // Cor da área abaixo da linha
+                tension: 0.1,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: {
+                    type: 'time',
+                    time: {
+                        unit: 'day',
+                        tooltipFormat: 'DD/MM/YYYY',
+                        displayFormats: {
+                            day: 'DD/MM'
+                        }
+                    },
+                    title: {
+                        display: true,
+                        text: 'Data'
+                    }
+                },
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Receita (R$)'
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed.y !== null) {
+                                label += new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(context.parsed.y);
+                            }
+                            return label;
+                        }
+                    }
+                }
+            }
         }
     });
 
-    // Ordena as datas
-    const sortedDates = Object.keys(salesByDate).sort();
-    const salesValues = sortedDates.map(date => salesByDate[date]);
+    // Projeção de Vendas (Exemplo simples: média dos últimos 7 dias)
+    const last7DaysData = chartData.slice(-7);
+    const averageLast7Days = last7DaysData.length > 0 ? last7DaysData.reduce((a, b) => a + b, 0) / last7DaysData.length : 0;
 
-    // Gráfico de histórico
-    const historicalCtx = document.getElementById('historicalChart');
-    if (historicalCtx) {
-        historicalChart = new Chart(historicalCtx, {
-            type: 'line',
-            data: {
-                labels: sortedDates,
-                datasets: [{
-                    label: 'Vendas Diárias',
-                    data: salesValues,
-                    borderColor: 'rgb(0, 72, 18)',
-                    backgroundColor: 'rgba(0, 72, 18, 0.1)',
-                    tension: 0.4,
-                    fill: true
-                }]
+    const projectionLabels = [];
+    const projectionValues = [];
+    let currentDate = new Date(sortedDates[sortedDates.length - 1]);
+    for (let i = 1; i <= 7; i++) {
+        currentDate.setDate(currentDate.getDate() + 1);
+        projectionLabels.push(currentDate.toISOString().split('T')[0]);
+        projectionValues.push(averageLast7Days); // Projeção simples: mantém a média
+    }
+
+    const projectionCtx = document.getElementById('projectionChart').getContext('2d');
+    if (projectionChart) {
+        projectionChart.destroy();
+    }
+    projectionChart = new Chart(projectionCtx, {
+        type: 'line',
+        data: {
+            labels: projectionLabels,
+            datasets: [{
+                label: 'Projeção Diária (R$)',
+                data: projectionValues,
+                borderColor: 'rgb(0, 72, 72)', // Cor da linha
+                backgroundColor: 'rgba(0, 72, 72, 0.2)', // Cor da área abaixo da linha
+                tension: 0.1,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: {
+                    type: 'time',
+                    time: {
+                        unit: 'day',
+                        tooltipFormat: 'DD/MM/YYYY',
+                        displayFormats: {
+                            day: 'DD/MM'
+                        }
+                    },
+                    title: {
+                        display: true,
+                        text: 'Data'
+                    }
+                },
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Receita (R$)'
+                    }
+                }
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: { legend: { position: 'top' } },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: { stepSize: 1 }
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed.y !== null) {
+                                label += new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(context.parsed.y);
+                            }
+                            return label;
+                        }
                     }
                 }
             }
-        });
-    }
-
-    // Gráfico de projeção (média móvel simples dos últimos 7 dias)
-    const projectionCtx = document.getElementById('projectionChart');
-    if (projectionCtx && salesValues.length > 0) {
-        const projectionLabels = [];
-        const projectionData = [];
-        const numDays = salesValues.length;
-
-        // Calcula a média móvel dos últimos 7 dias para projeção
-        for (let i = 0; i < numDays; i++) {
-            if (i >= 6) { // Precisa de pelo menos 7 dias para calcular a primeira média
-                const last7Days = salesValues.slice(i - 6, i + 1);
-                const sum = last7Days.reduce((a, b) => a + b, 0);
-                projectionData.push(sum / last7Days.length);
-                projectionLabels.push(sortedDates[i]);
-            } else {
-                // Para os primeiros dias, a projeção pode ser a própria venda diária ou 0
-                projectionData.push(salesValues[i]); 
-                projectionLabels.push(sortedDates[i]);
-            }
         }
-
-        // Adiciona 3 dias de projeção futura baseada na última média
-        if (projectionData.length > 0) {
-            const lastAvg = projectionData[projectionData.length - 1];
-            const lastDate = new Date(sortedDates[sortedDates.length - 1]);
-            for (let i = 1; i <= 3; i++) {
-                const nextDate = new Date(lastDate);
-                nextDate.setDate(lastDate.getDate() + i);
-                projectionLabels.push(nextDate.toISOString().split('T')[0]);
-                projectionData.push(lastAvg); // Projeta a última média
-            }
-        }
-
-        projectionChart = new Chart(projectionCtx, {
-            type: 'bar',
-            data: {
-                labels: projectionLabels,
-                datasets: [{
-                    label: 'Projeção de Vendas (Média Móvel)',
-                    data: projectionData,
-                    backgroundColor: 'rgba(0, 72, 18, 0.6)',
-                    borderColor: 'rgb(0, 72, 18)',
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: { legend: { position: 'top' } },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: { stepSize: 1 }
-                    }
-                }
-            }
-        });
-    }
+    });
 }
 
-// Preencher dropdown de filtro dinamicamente
+// Atualizar data atual no dashboard
+function updateCurrentDate() {
+    const today = new Date();
+    const options = { year: 'numeric', month: 'long', day: 'numeric' };
+    document.getElementById('currentDate').textContent = today.toLocaleDateString('pt-BR', options);
+}
+
+// Popular dropdown de filtro
 function populateFilterDropdown(filterType) {
-    const dropdown = document.getElementById('filterValue');
-    if (!dropdown) {
-        console.error('Elemento filterValue não encontrado.');
+    const filterValueDropdown = document.getElementById('filterValue');
+    if (!filterValueDropdown) {
+        console.error("Elemento 'filterValue' não encontrado.");
         return;
     }
+    filterValueDropdown.innerHTML = '<option value="">Selecione...</option>'; // Opção padrão
+    filterValueDropdown.classList.remove('hidden'); // Garante que o dropdown esteja visível
 
-    dropdown.innerHTML = '<option value="">Escolha uma opção...</option>'; // Limpa e adiciona opção padrão
-
-    if (filterType === 'all') {
-        dropdown.classList.add('hidden');
-        console.log("Dropdown 'Selecione:' está oculto (filterType é 'all').");
-        return;
-    }
-
-    dropdown.classList.remove('hidden'); // Garante que o dropdown esteja visível
-    console.log("Dropdown 'Selecione:' está visível (classe 'hidden' removida).");
-
-    let fieldName = '';
+    let uniqueValues = new Set();
+    let field = '';
 
     switch (filterType) {
+        case 'all':
+            filterValueDropdown.classList.add('hidden'); // Esconde se for 'Todos'
+            updateDashboard(allData); // Reseta o dashboard
+            return;
         case 'medicamento':
-            fieldName = 'Medicamento';
+            field = 'Medicamento';
             break;
         case 'cidade':
-            fieldName = 'Cidade';
+            field = 'Cidade';
             break;
         case 'categoria':
-            fieldName = 'Categoria';
+            field = 'Categoria';
             break;
         case 'vendedor':
-            fieldName = 'Vendedor';
+            field = 'Vendedor';
             break;
         default:
-            dropdown.classList.add('hidden');
             console.warn('Tipo de filtro desconhecido:', filterType);
+            filterValueDropdown.classList.add('hidden');
             return;
     }
 
-    const uniqueValues = new Set();
     allData.forEach(row => {
-        if (row[fieldName]) {
-            uniqueValues.add(row[fieldName]);
+        if (row[field]) {
+            uniqueValues.add(row[field]);
         }
     });
 
-    const sortedValues = Array.from(uniqueValues).sort();
-    sortedValues.forEach(value => {
+    Array.from(uniqueValues).sort().forEach(value => {
         const option = document.createElement('option');
         option.value = value;
         option.textContent = value;
-        dropdown.appendChild(option);
+        filterValueDropdown.appendChild(option);
     });
-    console.log(`Dropdown '${filterType}' preenchido com ${sortedValues.length} opções.`);
+    console.log(`Dropdown de filtro '${filterType}' populado com ${uniqueValues.size} valores únicos.`);
 }
 
-// Atualizar data
-function updateCurrentDate() {
-    const currentDateEl = document.getElementById('currentDate');
-    if (currentDateEl) {
-        const now = new Date();
-        currentDateEl.textContent = now.toLocaleDateString('pt-BR', {
-            day: '2-digit',
-            month: 'long',
-            year: 'numeric'
-        });
-    }
-}
-
-// Inicialização - TODOS os Event Listeners dentro do DOMContentLoaded
+// Event Listeners
 document.addEventListener('DOMContentLoaded', () => {
     console.log('DOM carregado. Iniciando carregamento do CSV...');
+    loadCSV();
 
-    loadCSV(); // Inicia o carregamento do CSV
-
-    const filterTypeEl = document.getElementById('filterType');
-    if (filterTypeEl) {
-        filterTypeEl.addEventListener('change', (e) => {
-            console.log('Filtro alterado para:', e.target.value);
-            populateFilterDropdown(e.target.value);
+    const filterTypeElement = document.getElementById('filterType');
+    if (filterTypeElement) {
+        filterTypeElement.addEventListener('change', (event) => {
+            populateFilterDropdown(event.target.value);
         });
     }
 
-    const filterBtn = document.getElementById('filterBtn');
-    if (filterBtn) {
-        filterBtn.addEventListener('click', () => {
+    const filterValueElement = document.getElementById('filterValue');
+    if (filterValueElement) {
+        filterValueElement.addEventListener('change', (event) => {
             const filterType = document.getElementById('filterType').value;
-            const filterValue = document.getElementById('filterValue').value;
+            const filterValue = event.target.value;
 
-            console.log('Filtro clicado:', filterType, filterValue);
-
-            if (filterType === 'all' || !filterValue) {
+            if (!filterValue) { // Se "Selecione..." for escolhido, volta para todos os dados
                 updateDashboard(allData);
                 return;
             }
@@ -399,7 +422,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     field = 'Vendedor';
                     break;
                 default:
-                    console.warn('Tipo de filtro desconhecido:', filterType);
+                    console.warn('Tipo de filtro desconhecido para aplicação:', filterType);
                     return;
             }
 
