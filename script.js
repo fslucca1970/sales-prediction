@@ -33,7 +33,7 @@ function parseCSV(csv) {
         const separator = firstLine.includes('\t') ? '\t' : ',';
 
         const headers = lines[0].split(separator).map(h => h.trim().replace(/"/g, ''));
-        console.log("Cabeçalhos do CSV lidos:", headers); // Log para verificar os cabeçalhos lidos
+        console.log("Cabeçalhos do CSV lidos:", headers);
 
         allData = [];
 
@@ -53,7 +53,7 @@ function parseCSV(csv) {
         console.log("Dados carregados (allData):", allData);
         console.log("Total de registros:", allData.length);
         if (allData.length > 0) {
-            console.log("Primeira linha de dados (objeto):", allData[0]); // Log para verificar o objeto da primeira linha
+            console.log("Primeira linha de dados (objeto):", allData[0]);
         }
 
         if (allData.length === 0) {
@@ -64,7 +64,7 @@ function parseCSV(csv) {
         // Atualiza o dashboard com os dados carregados
         updateDashboard(allData);
 
-        // Inicializa o dropdown após um pequeno delay para garantir que o DOM está pronto
+        // Inicializa o dropdown APÓS o dashboard ser atualizado e o DOM estar pronto
         setTimeout(() => {
             const filterTypeElement = document.getElementById('filterType');
             if (filterTypeElement) {
@@ -91,7 +91,7 @@ function updateDashboard(data) {
     }
 
     updateStats(data);
-    renderTable(data);
+    renderTable(data); // Garante que a tabela seja renderizada
     renderCharts(data);
     updateCurrentDate();
 }
@@ -101,7 +101,7 @@ function updateStats(data) {
     const totalSales = data.length;
 
     const totalRevenue = data.reduce((sum, row) => {
-        if (!row.Preço) return sum; // Usando 'Preço'
+        if (!row.Preço) return sum;
 
         const priceStr = row.Preço.toString().replace(/R\$\s*/g, '').replace(/\s/g, '').replace(',', '.');
         const price = parseFloat(priceStr);
@@ -113,7 +113,7 @@ function updateStats(data) {
 
     const products = {};
     data.forEach(row => {
-        if (row.Medicamento) { // Usando 'Medicamento'
+        if (row.Medicamento) {
             products[row.Medicamento] = (products[row.Medicamento] || 0) + 1;
         }
     });
@@ -141,7 +141,7 @@ function renderTable(data) {
         return;
     }
 
-    tbody.innerHTML = '';
+    tbody.innerHTML = ''; // Limpa a tabela antes de preencher
 
     const displayData = data.slice(0, 50); // Limita a 50 linhas para performance
 
@@ -153,15 +153,16 @@ function renderTable(data) {
         const precoFormatado = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(precoValue);
 
         tr.innerHTML = `
-            <td>${row.Data || '-'}</td>         <!-- Usando 'Data' -->
-            <td>${row.Medicamento || '-'}</td>  <!-- Usando 'Medicamento' -->
+            <td>${row.Data || '-'}</td>
+            <td>${row.Medicamento || '-'}</td>
             <td>${row.Categoria || '-'}</td>
-            <td>${row.Cidade || '-'}</td>       <!-- Usando 'Cidade' -->
-            <td>${row.Vendedor || '-'}</td>     <!-- Usando 'Vendedor' -->
-            <td>${precoFormatado}</td>          <!-- Usando 'Preço' formatado com proteção -->
+            <td>${row.Cidade || '-'}</td>
+            <td>${row.Vendedor || '-'}</td>
+            <td>${precoFormatado}</td>
         `;
         tbody.appendChild(tr);
     });
+    console.log(`Tabela 'Detalhamento Diário' preenchida com ${displayData.length} registros.`);
 }
 
 // Renderizar gráficos
@@ -184,7 +185,7 @@ function renderCharts(data) {
     // Agrupa vendas por Data
     const salesByDate = {};
     data.forEach(row => {
-        const date = row.Data; // Usando 'Data'
+        const date = row.Data;
         if (date) {
             salesByDate[date] = (salesByDate[date] || 0) + 1;
         }
@@ -305,16 +306,16 @@ function populateFilterDropdown(filterType) {
 
     switch (filterType) {
         case 'medicamento':
-            fieldName = 'Medicamento'; // Usando 'Medicamento'
+            fieldName = 'Medicamento';
             break;
         case 'cidade':
-            fieldName = 'Cidade';       // Usando 'Cidade'
+            fieldName = 'Cidade';
             break;
         case 'categoria':
             fieldName = 'Categoria';
             break;
         case 'vendedor':
-            fieldName = 'Vendedor';     // Usando 'Vendedor'
+            fieldName = 'Vendedor';
             break;
         default:
             dropdown.classList.add('hidden');
@@ -381,16 +382,16 @@ document.addEventListener('DOMContentLoaded', () => {
             let field = '';
             switch (filterType) {
                 case 'medicamento':
-                    field = 'Medicamento'; // Usando 'Medicamento'
+                    field = 'Medicamento';
                     break;
                 case 'cidade':
-                    field = 'Cidade';       // Usando 'Cidade'
+                    field = 'Cidade';
                     break;
                 case 'categoria':
                     field = 'Categoria';
                     break;
                 case 'vendedor':
-                    field = 'Vendedor';     // Usando 'Vendedor'
+                    field = 'Vendedor';
                     break;
                 default:
                     console.warn('Tipo de filtro desconhecido:', filterType);
@@ -418,4 +419,3 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
-   
