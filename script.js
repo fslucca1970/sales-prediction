@@ -48,12 +48,9 @@ function parseCSV(csv) {
                 row[header] = values[index] || '';
             });
 
-            // --- CORREÇÃO AQUI: Ajustar o parsing do Preço para o formato "X.YY" (ponto decimal) ---
+            // CORREÇÃO DO PARSING DE PREÇO (mantida a correção que funcionou)
             let rawPrice = row['Preço'].replace('R$', '').trim();
-            // Pelo seu CSV, o ponto JÁ É o separador decimal. Não precisamos remover pontos de milhar
-            // nem substituir vírgulas. Apenas converter diretamente após remover o "R$".
-            let precoUnitario = parseFloat(rawPrice); // Esta é a linha crucial!
-            // --- FIM DA CORREÇÃO ---
+            let precoUnitario = parseFloat(rawPrice); 
 
             if (isNaN(precoUnitario)) precoUnitario = 0;
             row['Preço Unitário'] = precoUnitario;
@@ -67,8 +64,8 @@ function parseCSV(csv) {
         }
 
         console.log(`CSV carregado com sucesso: ${allData.length} registros`);
-        initializeFilters(); // Agora esta função vai popular TODOS os filtros
-        updateDashboard(allData);
+        initializeFilters(); // Popula todos os filtros na carga inicial
+        updateDashboard(allData); // Atualiza o dashboard com todos os dados inicialmente
 
     } catch (error) {
         console.error('Erro ao parsear CSV:', error);
@@ -83,6 +80,8 @@ function getUniqueValues(data, column) {
 
 function populateSelect(selectId, options, defaultText) {
     const select = document.getElementById(selectId);
+    // Guarda a seleção atual antes de limpar
+    const currentSelection = select.value; 
     select.innerHTML = `<option value="all">${defaultText}</option>`;
     options.forEach(option => {
         const opt = document.createElement('option');
@@ -90,11 +89,16 @@ function populateSelect(selectId, options, defaultText) {
         opt.textContent = option;
         select.appendChild(opt);
     });
-    // Remove a desabilitação inicial, pois os filtros serão sempre populados
-    select.disabled = false; 
+    // Tenta restaurar a seleção atual, se ainda for uma opção válida
+    if (options.includes(currentSelection)) {
+        select.value = currentSelection;
+    } else {
+        select.value = 'all'; // Volta para 'all' se a opção não existe mais
+    }
+    select.disabled = false; // Mantém sempre habilitado
 }
 
-// Modificado: Agora initializeFilters popula TODOS os filtros na carga inicial
+// Modificado: initializeFilters agora popula TODOS os filtros com base em allData
 function initializeFilters() {
     populateSelect('filterCidade', getUniqueValues(allData, 'Cidade'), 'Todas as Cidades');
     populateSelect('filterCategoria', getUniqueValues(allData, 'Categoria'), 'Todas as Categorias');
@@ -265,9 +269,7 @@ document.addEventListener('DOMContentLoaded', function() {
     loadCSV();
 
     // Event Listeners para os filtros
-    // Cada filtro agora apenas chama applyFilters e repopula os outros filtros com base nos dados filtrados
-    // Isso permite que cada filtro "restrinja" as opções dos outros, mas sem desabilitá-los.
-
+    // Cada filtro agora chama applyFilters e updateDependentFilters
     document.getElementById('filterCidade').addEventListener('change', function() {
         applyFilters();
         updateDependentFilters();
@@ -298,45 +300,52 @@ document.addEventListener('DOMContentLoaded', function() {
         updateDashboard(allData); // Atualiza o dashboard com todos os dados
     });
 
-    // Nova função para atualizar os filtros dependentes
+    // Função para atualizar os filtros dependentes (opções)
     function updateDependentFilters() {
-        let currentFilteredData = allData;
-
         const selectedCidade = document.getElementById('filterCidade').value;
         const selectedCategoria = document.getElementById('filterCategoria').value;
         const selectedMedicamento = document.getElementById('filterMedicamento').value;
         const selectedVendedor = document.getElementById('filterVendedor').value;
 
-        // Filtra os dados com base nas seleções atuais
+        let filteredForNextDropdowns = allData;
+
+        // Filtra os dados para popular os próximos dropdowns
         if (selectedCidade !== 'all') {
-            currentFilteredData = currentFilteredData.filter(row => row['Cidade'] === selectedCidade);
+            filteredForNextDropdowns = filteredForNextDropdowns.filter(row => row['Cidade'] === selectedCidade);
         }
+        // Repopula Categoria
+        populateSelect('filterCategoria', getUniqueValues(filteredForNextDropdowns, 'Categoria'), 'Todas as Categorias');
+        // Mantém a seleção atual se ainda for válida
+        if (selectedCategoria !== 'all' && getUniqueValues(filteredForNextDropdowns, 'Categoria').includes(selectedCategoria)) {
+            document.getElementById('filterCategoria').value = selectedCategoria;
+        } else {
+            document.getElementById('filterCategoria').value = 'all';
+        }
+
+        // Filtra mais para popular Medicamento
         if (selectedCategoria !== 'all') {
-            currentFilteredData = currentFilteredData.filter(row => row['Categoria'] === selectedCategoria);
+            filteredForNextDropdowns = filteredForNextDropdowns.filter(row => row['Categoria'] === selectedCategoria);
         }
+        // Repopula Medicamento
+        populateSelect('filterMedicamento', getUniqueValues(filteredForNextDropdowns, 'Medicamento'), 'Todos os Medicamentos');
+        // Mantém a seleção atual se ainda for válida
+        if (selectedMedicamento !== 'all' && getUniqueValues(filteredForNextDropdowns, 'Medicamento').includes(selectedMedicamento)) {
+            document.getElementById('filterMedicamento').value = selectedMedicamento;
+        } else {
+            document.getElementById('filterMedicamento').value = 'all';
+        }
+
+        // Filtra mais para popular Vendedor
         if (selectedMedicamento !== 'all') {
-            currentFilteredData = currentFilteredData.filter(row => row['Medicamento'] === selectedMedicamento);
+            filteredForNextDropdowns = filteredForNextDropdowns.filter(row => row['Medicamento'] === selectedMedicamento);
         }
-        if (selectedVendedor !== 'all') {
-            currentFilteredData = currentFilteredData.filter(row => row['Vendedor'] === selectedVendedor);
+        // Repopula Vendedor
+        populateSelect('filterVendedor', getUniqueValues(filteredForNextDropdowns, 'Vendedor'), 'Todos os Vendedores');
+        // Mantém a seleção atual se ainda for válida
+        if (selectedVendedor !== 'all' && getUniqueValues(filteredForNextDropdowns, 'Vendedor').includes(selectedVendedor)) {
+            document.getElementById('filterVendedor').value = selectedVendedor;
+        } else {
+            document.getElementById('filterVendedor').value = 'all';
         }
-
-        // Repopula os filtros com base nos dados filtrados, mantendo a seleção atual
-        const currentCidade = document.getElementById('filterCidade').value;
-        const currentCategoria = document.getElementById('filterCategoria').value;
-        const currentMedicamento = document.getElementById('filterMedicamento').value;
-        const currentVendedor = document.getElementById('filterVendedor').value;
-
-        populateSelect('filterCidade', getUniqueValues(allData, 'Cidade'), 'Todas as Cidades');
-        document.getElementById('filterCidade').value = currentCidade;
-
-        populateSelect('filterCategoria', getUniqueValues(currentFilteredData, 'Categoria'), 'Todas as Categorias');
-        document.getElementById('filterCategoria').value = currentCategoria;
-
-        populateSelect('filterMedicamento', getUniqueValues(currentFilteredData, 'Medicamento'), 'Todos os Medicamentos');
-        document.getElementById('filterMedicamento').value = currentMedicamento;
-
-        populateSelect('filterVendedor', getUniqueValues(currentFilteredData, 'Vendedor'), 'Todos os Vendedores');
-        document.getElementById('filterVendedor').value = currentVendedor;
     }
 });
