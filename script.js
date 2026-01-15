@@ -84,10 +84,10 @@ function parseCSV(csv) {
                 console.warn(`Linha ${i + 1}: Data inválida "${row['Data']}". Linha ignorada.`);
                 isValidRow = false;
             }
-            row['Data'] = date;
+            row['Data'] = date; // Armazena o objeto Date parseado
 
             // Correção CRÍTICA: Usar 'Preço' do CSV para Preço Unitário
-            let precoUnitarioRaw = String(row['Preço']).replace('R$', '').replace('.', '').replace(',', '.').trim();
+            let precoUnitarioRaw = String(row['Preço']).replace('R$', '').replace(/\./g, '').replace(',', '.').trim();
             const precoUnitario = parseFloat(precoUnitarioRaw);
             if (isNaN(precoUnitario)) {
                 console.warn(`Linha ${i + 1}: Preço Unitário inválido "${row['Preço']}". Linha ignorada.`);
@@ -123,34 +123,46 @@ function parseCSV(csv) {
     }
 }
 
-function initializeFilters() {
-    const cidades = [...new Set(allData.map(item => item['Cidade']))].sort();
-    const categorias = [...new Set(allData.map(item => item['Categoria']))].sort();
-    const medicamentos = [...new Set(allData.map(item => item['Medicamento']))].sort();
-    const vendedores = [...new Set(allData.map(item => item['Vendedor']))].sort();
+function getUniqueValues(data, key) {
+    const values = [...new Set(data.map(item => item[key]))].filter(Boolean); // Remove valores vazios/nulos
+    return values.sort();
+}
 
-    populateSelect('filterCidade', cidades, 'Todas as Cidades');
-    populateSelect('filterCategoria', categorias, 'Todas as Categorias');
-    populateSelect('filterMedicamento', medicamentos, 'Todos os Medicamentos');
-    populateSelect('filterVendedor', vendedores, 'Todos os Vendedores');
+function populateSelect(elementId, items, defaultOptionText) {
+    const select = document.getElementById(elementId);
+    if (!select) {
+        console.error(`Elemento com ID '${elementId}' não encontrado.`);
+        return;
+    }
+    const currentSelection = select.value;
+    select.innerHTML = `<option value="all">${defaultOptionText}</option>`; // Limpa e adiciona opção padrão
+
+    items.forEach(item => {
+        const option = document.createElement('option');
+        option.value = item;
+        option.textContent = item;
+        select.appendChild(option);
+    });
+    // Tenta restaurar a seleção anterior, se ainda for uma opção válida
+    if (items.includes(currentSelection) || currentSelection === 'all') {
+        select.value = currentSelection;
+    } else {
+        select.value = 'all';
+    }
+    select.disabled = items.length === 0;
+}
+
+function initializeFilters() {
+    populateSelect('filterCidade', getUniqueValues(allData, 'Cidade'), 'Todas as Cidades');
+    populateSelect('filterCategoria', getUniqueValues(allData, 'Categoria'), 'Todas as Categorias');
+    populateSelect('filterMedicamento', getUniqueValues(allData, 'Medicamento'), 'Todos os Medicamentos');
+    populateSelect('filterVendedor', getUniqueValues(allData, 'Vendedor'), 'Todos os Vendedores');
 
     // Habilita os filtros após populá-los
     document.getElementById('filterCidade').disabled = false;
     document.getElementById('filterCategoria').disabled = false;
     document.getElementById('filterMedicamento').disabled = false;
     document.getElementById('filterVendedor').disabled = false;
-}
-
-function populateSelect(elementId, items, defaultOptionText) {
-    const select = document.getElementById(elementId);
-    select.innerHTML = `<option value="all">${defaultOptionText}</option>`; // Limpa e adiciona opção padrão
-
-    items.forEach(item => {
-        const option = document.createElement('option'); // Corrigido de RcreateElement
-        option.value = item;
-        option.textContent = item;
-        select.appendChild(option);
-    });
 }
 
 function updateDependentFilters() {
@@ -164,15 +176,8 @@ function updateDependentFilters() {
     if (selectedCidade !== 'all') {
         filtered = filtered.filter(item => item['Cidade'] === selectedCidade);
     }
-    if (selectedCategoria !== 'all') {
-        filtered = filtered.filter(item => item['Categoria'] === selectedCategoria);
-    }
-    if (selectedMedicamento !== 'all') {
-        filtered = filtered.filter(item => item['Medicamento'] === selectedMedicamento);
-    }
-    if (selectedVendedor !== 'all') {
-        filtered = filtered.filter(item => item['Vendedor'] === selectedVendedor);
-    }
+    // Não filtra por categoria/medicamento/vendedor ainda, apenas para popular os próximos dropdowns
+    // A filtragem completa é feita em applyFilters
 
     const categorias = [...new Set(filtered.map(item => item['Categoria']))].sort();
     const medicamentos = [...new Set(filtered.map(item => item['Medicamento']))].sort();
@@ -265,7 +270,7 @@ function aggregateData(data, period) {
 
     data.forEach(item => {
         let key;
-        const date = item['Data'];
+        const date = item['Data']; // Usar o objeto Date diretamente
 
         if (period === 'daily') {
             key = date.toISOString().split('T')[0]; // YYYY-MM-DD
@@ -295,7 +300,32 @@ function aggregateData(data, period) {
 
 function renderCharts(data, period) {
     const aggregated = aggregateData(data, period);
-    const labels = aggregated.map(item => item.date);
+
+    // Se não houver dados agregados, não tenta renderizar os gráficos
+    if (aggregated.length === 0) {
+        console.warn("Não há dados agregados para renderizar os gráficos.");
+        if (historicalChart) historicalChart.destroy();
+        if (projectionChart) projectionChart.destroy();
+
+        const historicalCanvas = document.getElementById('historicalChart');
+        const ctxHistorical = historicalCanvas.getContext('2d');
+        ctxHistorical.clearRect(0, 0, historicalCanvas.width, historicalCanvas.height);
+        ctxHistorical.font = "16px Arial";
+        ctxHistorical.textAlign = "center";
+        ctxHistorical.fillStyle = "#666";
+        ctxHistorical.fillText("Sem dados para exibir o histórico.", historicalCanvas.width / 2, historicalCanvas.height / 2);
+
+        const projectionCanvas = document.getElementById('projectionChart');
+        const ctxProjection = projectionCanvas.getContext('2d');
+        ctxProjection.clearRect(0, 0, projectionCanvas.width, projectionCanvas.height);
+        ctxProjection.font = "16px Arial";
+        ctxProjection.textAlign = "center";
+        ctxProjection.fillStyle = "#666";
+        ctxProjection.fillText("Sem dados para exibir a projeção.", projectionCanvas.width / 2, projectionCanvas.height / 2);
+        return;
+    }
+
+    const labels = aggregated.map(item => item.date); // Usar a chave ISO para o eixo de tempo
     const revenueData = aggregated.map(item => item.revenue);
     const unitsData = aggregated.map(item => item.units);
 
@@ -308,7 +338,8 @@ function renderCharts(data, period) {
     if (historicalChart) historicalChart.destroy();
     if (projectionChart) projectionChart.destroy();
 
-    const ctxHistorical = document.getElementById('historicalChart').getContext('2d');
+    const historicalCanvas = document.getElementById('historicalChart');
+    const ctxHistorical = historicalCanvas.getContext('2d');
     historicalChart = new Chart(ctxHistorical, {
         type: 'bar',
         data: {
@@ -399,11 +430,12 @@ function renderCharts(data, period) {
         }
     }
 
-    const ctxProjection = document.getElementById('projectionChart').getContext('2d');
+    const projectionCanvas = document.getElementById('projectionChart');
+    const ctxProjection = projectionCanvas.getContext('2d');
     projectionChart = new Chart(ctxProjection, {
         type: 'line',
         data: {
-            labels: [...labels, ...projectionLabels],
+            labels: [...labels, ...projectionLabels], // Combina labels históricos e de projeção
             datasets: [{
                 label: historicalMetricLabel + ' (Histórico)',
                 data: historicalMetricData,
@@ -476,10 +508,29 @@ function renderCharts(data, period) {
 
 function updateTable(data) {
     const tableBody = document.getElementById('salesTableBody');
+    if (!tableBody) {
+        console.error("Elemento 'salesTableBody' não encontrado.");
+        return;
+    }
     tableBody.innerHTML = ''; // Limpa a tabela
 
     // Limita a exibição a um número razoável de linhas para evitar sobrecarga
     const displayData = data.slice(0, 500);
+
+    // Atualiza o cabeçalho da tabela dinamicamente para o modo diário
+    const tableHeadRow = document.getElementById('salesTable').querySelector('thead tr');
+    if (tableHeadRow) {
+        tableHeadRow.innerHTML = `
+            <th>Data</th>
+            <th>Medicamento</th>
+            <th>Categoria</th>
+            <th>Quantidade</th>
+            <th>Preço Unitário</th>
+            <th>Preço Total</th>
+            <th>Cidade</th>
+            <th>Vendedor</th>
+        `;
+    }
 
     displayData.forEach(item => {
         const row = tableBody.insertRow();
@@ -487,8 +538,8 @@ function updateTable(data) {
         row.insertCell().textContent = item['Medicamento'];
         row.insertCell().textContent = item['Categoria'];
         row.insertCell().textContent = formatNumber(item['Quantidade']);
-        row.insertCell().textContent = formatCurrency(item['Preço Unitário']); // Usar o valor parseado
-        row.insertCell().textContent = formatCurrency(item['Preço Total']); // Usar o valor calculado
+        row.insertCell().textContent = formatCurrency(item['Preço Unitário']);
+        row.insertCell().textContent = formatCurrency(item['Preço Total']);
         row.insertCell().textContent = item['Cidade'];
         row.insertCell().textContent = item['Vendedor'];
     });
