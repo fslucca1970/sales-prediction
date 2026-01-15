@@ -13,16 +13,26 @@ const formatNumber = (value) => {
     return new Intl.NumberFormat('pt-BR').format(value);
 };
 
-// Função auxiliar para parsear data DD/MM/YYYY de forma robusta
+// Função auxiliar para parsear data DD/MM/YYYY de forma ULTRA-ROBUSTA
 function parseDateString(dateString) {
     const parts = dateString.split('/');
     if (parts.length === 3) {
         const day = parseInt(parts[0], 10);
         const month = parseInt(parts[1], 10) - 1; // Mês é 0-indexado
         const year = parseInt(parts[2], 10);
-        return new Date(year, month, day);
+
+        // Validação básica para evitar datas absurdas
+        if (isNaN(day) || isNaN(month) || isNaN(year) || month < 0 || month > 11 || day < 1 || day > 31) {
+            return new Date('Invalid Date');
+        }
+
+        const date = new Date(year, month, day);
+        // Verifica se a data criada corresponde aos valores originais (evita overflow de dias, ex: 31/02)
+        if (date.getFullYear() === year && date.getMonth() === month && date.getDate() === day) {
+            return date;
+        }
     }
-    return new Date('Invalid Date'); // Retorna data inválida se o formato não for o esperado
+    return new Date('Invalid Date'); // Retorna data inválida se o formato não for o esperado ou a data for inválida
 }
 
 async function loadCSV() {
@@ -46,7 +56,7 @@ function parseCSV(csv) {
         }
 
         // Tenta detectar o separador: ; ou , ou \t
-        let separator = ',';
+        let separator = ','; // Padrão
         if (lines[0].includes(';')) {
             separator = ';';
         } else if (lines[0].includes('\t')) {
@@ -58,13 +68,18 @@ function parseCSV(csv) {
         console.log('Headers do CSV:', headers);
 
         allData = [];
+        let invalidDateCount = 0;
+        let invalidPriceCount = 0;
+        let invalidQuantityCount = 0;
+        let columnMismatchCount = 0;
 
         for (let i = 1; i < lines.length; i++) {
             if (!lines[i].trim()) continue;
 
             const values = lines[i].split(separator).map(v => v.trim().replace(/"/g, ''));
             if (values.length !== headers.length) {
-                console.warn(`Linha ${i + 1} ignorada: número de colunas (${values.length}) não corresponde ao número de cabeçalhos (${headers.length}). Linha: "${lines[i]}"`);
+                console.warn(`Linha ${i + 1} ignorada (colunas): Esperado ${headers.length}, encontrado ${values.length}. Linha: "${lines[i]}"`);
+                columnMismatchCount++;
                 continue; // Pula linhas com número incorreto de colunas
             }
 
@@ -78,7 +93,8 @@ function parseCSV(csv) {
 
             // Verifica se a data é válida
             if (isNaN(row['ParsedDate'].getTime())) {
-                console.warn(`Linha ${i + 1} ignorada: Data inválida encontrada: "${row['Data']}".`);
+                console.warn(`Linha ${i + 1} ignorada (data): Data inválida encontrada: "${row['Data']}".`);
+                invalidDateCount++;
                 continue; // Pula esta linha se a data for inválida
             }
 
@@ -87,14 +103,16 @@ function parseCSV(csv) {
             rawPrice = rawPrice.replace(/\./g, '').replace(',', '.'); // Remove todos os pontos e substitui vírgula por ponto
             let precoUnitario = parseFloat(rawPrice);
             if (isNaN(precoUnitario)) {
-                console.warn(`Linha ${i + 1} ignorada: Preço unitário inválido: "${row['Preço']}".`);
+                console.warn(`Linha ${i + 1} (preço): Preço unitário inválido: "${row['Preço']}". Usando 0.`);
+                invalidPriceCount++;
                 precoUnitario = 0; // Define como 0 se for inválido, mas não pula a linha
             }
             row['Preço Unitário'] = precoUnitario;
 
             let quantidade = parseInt(row['Quantidade']) || 1;
             if (isNaN(quantidade)) {
-                console.warn(`Linha ${i + 1} ignorada: Quantidade inválida: "${row['Quantidade']}".`);
+                console.warn(`Linha ${i + 1} (quantidade): Quantidade inválida: "${row['Quantidade']}". Usando 1.`);
+                invalidQuantityCount++;
                 quantidade = 1; // Define como 1 se for inválido
             }
             row['Quantidade'] = quantidade;
@@ -105,8 +123,13 @@ function parseCSV(csv) {
         }
 
         console.log(`CSV carregado com sucesso: ${allData.length} registros válidos.`);
+        if (invalidDateCount > 0) console.warn(`${invalidDateCount} linhas ignoradas devido a datas inválidas.`);
+        if (invalidPriceCount > 0) console.warn(`${invalidPriceCount} preços unitários definidos como 0 devido a formato inválido.`);
+        if (invalidQuantityCount > 0) console.warn(`${invalidQuantityCount} quantidades definidas como 1 devido a formato inválido.`);
+        if (columnMismatchCount > 0) console.warn(`${columnMismatchCount} linhas ignoradas devido a número incorreto de colunas.`);
+
         if (allData.length === 0) {
-            alert('Nenhum dado válido foi encontrado no CSV após o processamento. Verifique o formato do arquivo.');
+            alert('Nenhum dado válido foi encontrado no CSV após o processamento. Verifique o formato do arquivo e o console para detalhes.');
         }
         initializeFilters(); // Inicializa os filtros com todos os dados
         updateDashboard(allData); // Atualiza o dashboard com todos os dados
@@ -149,9 +172,6 @@ function initializeFilters() {
     // document.getElementById('filterCategoria').disabled = true;
     // document.getElementById('filterMedicamento').disabled = true;
     // document.getElementById('filterVendedor').disabled = true;
-
-    // Adiciona event listeners para os filtros (apenas uma vez no DOMContentLoaded)
-    // Removido daqui para ser adicionado no DOMContentLoaded para evitar duplicação
 }
 
 function applyFilters() {
