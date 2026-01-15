@@ -78,11 +78,11 @@ function parseCSV(csv) {
             }
             row['Data'] = date; // Armazena o objeto Date parseado
 
-            // Correção CRÍTICA: Usar 'Preço' do CSV para Preço Unitário
+            // Usar 'Preço' do CSV para Preço Unitário
             let precoUnitarioRaw = String(row['Preço']).replace('R$', '').replace(/\./g, '').replace(',', '.').trim();
             const precoUnitario = parseFloat(precoUnitarioRaw);
             if (isNaN(precoUnitario)) {
-                console.warn(`Linha ${i + 1}: Preço Unitário inválido "${row['Preço']}". Linha ignorada.`);
+                console.warn(`Linha ${i + 1}: Preço Unitário inválido "${row['Preço']}". Usando 0.`);
                 isValidRow = false;
             }
             row['Preço Unitário'] = precoUnitario; // Armazenar como 'Preço Unitário' para consistência interna
@@ -90,7 +90,7 @@ function parseCSV(csv) {
             let quantidadeRaw = String(row['Quantidade']).replace('.', '').replace(',', '.').trim();
             const quantidade = parseInt(quantidadeRaw, 10);
             if (isNaN(quantidade)) {
-                console.warn(`Linha ${i + 1}: Quantidade inválida "${row['Quantidade']}". Linha ignorada.`);
+                console.warn(`Linha ${i + 1}: Quantidade inválida "${row['Quantidade']}". Usando 1.`);
                 isValidRow = false;
             }
             row['Quantidade'] = quantidade;
@@ -138,7 +138,8 @@ function populateSelect(elementId, items, defaultOptionText) {
     } else {
         select.value = 'all';
     }
-    select.disabled = items.length === 0;
+    // Os filtros devem estar habilitados se houver dados para eles
+    select.disabled = false; 
 }
 
 function initializeFilters() {
@@ -147,10 +148,12 @@ function initializeFilters() {
     populateSelect('filterMedicamento', getUniqueValues(allData, 'Medicamento'), 'Todos os Medicamentos');
     populateSelect('filterVendedor', getUniqueValues(allData, 'Vendedor'), 'Todos os Vendedores');
 
+    // Adiciona event listeners para os filtros
     document.getElementById('filterCidade').addEventListener('change', applyFilters);
     document.getElementById('filterCategoria').addEventListener('change', applyFilters);
     document.getElementById('filterMedicamento').addEventListener('change', applyFilters);
     document.getElementById('filterVendedor').addEventListener('change', applyFilters);
+    document.getElementById('clearBtn').addEventListener('click', clearFilters);
 }
 
 function applyFilters() {
@@ -167,7 +170,16 @@ function applyFilters() {
     });
 
     updateStats(filteredData);
-    updateTable(filteredData); // Chamada correta para a função de atualização da tabela
+    updateTable(filteredData); 
+}
+
+function clearFilters() {
+    document.getElementById('filterCidade').value = 'all';
+    document.getElementById('filterCategoria').value = 'all';
+    document.getElementById('filterMedicamento').value = 'all';
+    document.getElementById('filterVendedor').value = 'all';
+    // Não há mais filterPeriodo ou projectionMetric para resetar
+    applyFilters();
 }
 
 function updateStats(data) {
@@ -187,7 +199,7 @@ function updateStats(data) {
 
     document.getElementById('totalSales').textContent = formatNumber(totalSales);
     document.getElementById('totalRevenue').textContent = formatCurrency(totalRevenue);
-    document.getElementById('averageTicket').textContent = formatCurrency(averageTicket);
+    document.getElementById('avgTicket').textContent = formatCurrency(averageTicket);
     document.getElementById('topProduct').textContent = topProduct;
     document.getElementById('totalUnits').textContent = formatNumber(totalUnits); // Adicionado para unidades
 }
@@ -204,6 +216,21 @@ function updateTable(data) {
     const displayLimit = 500;
     const dataToDisplay = data.slice(0, displayLimit);
 
+    // Atualiza o cabeçalho da tabela dinamicamente para o modo diário
+    const tableHeadRow = document.getElementById('salesTable').querySelector('thead tr');
+    if (tableHeadRow) {
+        tableHeadRow.innerHTML = `
+            <th>Data</th>
+            <th>Medicamento</th>
+            <th>Categoria</th>
+            <th>Quantidade</th>
+            <th>Preço Unitário</th>
+            <th>Preço Total</th>
+            <th>Cidade</th>
+            <th>Vendedor</th>
+        `;
+    }
+
     dataToDisplay.forEach(item => {
         const row = tableBody.insertRow();
         row.insertCell().textContent = item['Data'].toLocaleDateString('pt-BR');
@@ -215,6 +242,8 @@ function updateTable(data) {
         row.insertCell().textContent = item['Cidade'];
         row.insertCell().textContent = item['Vendedor'];
     });
+
+    document.getElementById('tableTitle').textContent = `📋 Detalhamento Diário (Máximo ${dataToDisplay.length} linhas)`;
 
     if (data.length > displayLimit) {
         console.warn(`Exibindo apenas as primeiras ${displayLimit} linhas. Total de registros: ${data.length}`);
