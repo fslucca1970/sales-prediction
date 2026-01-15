@@ -48,12 +48,9 @@ function parseCSV(csv) {
                 row[header] = values[index] || '';
             });
 
-            // --- CORREÇÃO AQUI: Ajustar o parsing do Preço para o formato "X.YY" (ponto decimal) ---
+            // CORREÇÃO DA VÍRGULA AQUI (mantida a correção que funcionou)
             let rawPrice = row['Preço'].replace('R$', '').trim();
-            // Pelo seu CSV, o ponto JÁ É o separador decimal. Não precisamos remover pontos de milhar
-            // nem substituir vírgulas. Apenas converter diretamente após remover o "R$".
-            let precoUnitario = parseFloat(rawPrice); // Esta é a linha crucial!
-            // --- FIM DA CORREÇÃO ---
+            let precoUnitario = parseFloat(rawPrice); 
 
             if (isNaN(precoUnitario)) precoUnitario = 0;
             row['Preço Unitário'] = precoUnitario;
@@ -67,8 +64,8 @@ function parseCSV(csv) {
         }
 
         console.log(`CSV carregado com sucesso: ${allData.length} registros`);
-        initializeFilters();
-        updateDashboard(allData);
+        // Chamada inicial para popular todos os filtros e o dashboard
+        updateAllFiltersAndDashboard();
 
     } catch (error) {
         console.error('Erro ao parsear CSV:', error);
@@ -90,12 +87,65 @@ function populateSelect(selectId, options, defaultText) {
         opt.textContent = option;
         select.appendChild(opt);
     });
+    // AQUI ESTÁ A MUDANÇA: O filtro só é desabilitado se não houver NENHUMA opção além da padrão
+    select.disabled = (options.length === 0); 
 }
 
-function initializeFilters() {
-    const cidades = getUniqueValues(allData, 'Cidade');
-    populateSelect('filterCidade', cidades, 'Todas as Cidades');
+// Nova função para atualizar todos os filtros e o dashboard
+function updateAllFiltersAndDashboard() {
+    let currentFilteredData = allData;
+
+    const cidade = document.getElementById('filterCidade').value;
+    const categoria = document.getElementById('filterCategoria').value;
+    const medicamento = document.getElementById('filterMedicamento').value;
+    const vendedor = document.getElementById('filterVendedor').value;
+
+    // Aplica os filtros selecionados para determinar as opções dos próximos
+    if (cidade !== 'all') {
+        currentFilteredData = currentFilteredData.filter(row => row['Cidade'] === cidade);
+    }
+    // Popula Categoria
+    const categorias = getUniqueValues(currentFilteredData, 'Categoria');
+    populateSelect('filterCategoria', categorias, 'Todas as Categorias');
+    // Mantém a seleção atual se ainda for válida
+    if (categoria !== 'all' && categorias.includes(categoria)) {
+        document.getElementById('filterCategoria').value = categoria;
+    } else {
+        document.getElementById('filterCategoria').value = 'all';
+    }
+
+    // Aplica o filtro de Categoria para determinar as opções dos próximos
+    if (categoria !== 'all') {
+        currentFilteredData = currentFilteredData.filter(row => row['Categoria'] === categoria);
+    }
+    // Popula Medicamento
+    const medicamentos = getUniqueValues(currentFilteredData, 'Medicamento');
+    populateSelect('filterMedicamento', medicamentos, 'Todos os Medicamentos');
+    // Mantém a seleção atual se ainda for válida
+    if (medicamento !== 'all' && medicamentos.includes(medicamento)) {
+        document.getElementById('filterMedicamento').value = medicamento;
+    } else {
+        document.getElementById('filterMedicamento').value = 'all';
+    }
+
+    // Aplica o filtro de Medicamento para determinar as opções dos próximos
+    if (medicamento !== 'all') {
+        currentFilteredData = currentFilteredData.filter(row => row['Medicamento'] === medicamento);
+    }
+    // Popula Vendedor
+    const vendedores = getUniqueValues(currentFilteredData, 'Vendedor');
+    populateSelect('filterVendedor', vendedores, 'Todos os Vendedores');
+    // Mantém a seleção atual se ainda for válida
+    if (vendedor !== 'all' && vendedores.includes(vendedor)) {
+        document.getElementById('filterVendedor').value = vendedor;
+    } else {
+        document.getElementById('filterVendedor').value = 'all';
+    }
+
+    // Finalmente, aplica TODOS os filtros selecionados para atualizar o dashboard
+    applyFilters();
 }
+
 
 function applyFilters() {
     const cidade = document.getElementById('filterCidade').value;
@@ -106,16 +156,16 @@ function applyFilters() {
     let filtered = allData;
 
     if (cidade !== 'all') {
-    filtered = filtered.filter(row => row['Cidade'] === cidade);
+        filtered = filtered.filter(row => row['Cidade'] === cidade);
     }
     if (categoria !== 'all') {
-    filtered = filtered.filter(row => row['Categoria'] === categoria);
+        filtered = filtered.filter(row => row['Categoria'] === categoria);
     }
     if (medicamento !== 'all') {
-    filtered = filtered.filter(row => row['Medicamento'] === medicamento);
+        filtered = filtered.filter(row => row['Medicamento'] === medicamento);
     }
     if (vendedor !== 'all') {
-    filtered = filtered.filter(row => row['Vendedor'] === vendedor);
+        filtered = filtered.filter(row => row['Vendedor'] === vendedor);
     }
 
     updateDashboard(filtered);
@@ -259,71 +309,11 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM carregado. Iniciando...');
     loadCSV();
 
-    document.getElementById('filterCidade').addEventListener('change', function() {
-        let filtered = allData;
-
-        if (this.value !== 'all') {
-            filtered = filtered.filter(row => row['Cidade'] === this.value);
-        }
-
-        const categorias = getUniqueValues(filtered, 'Categoria');
-        populateSelect('filterCategoria', categorias, 'Todas as Categorias');
-        document.getElementById('filterCategoria').disabled = (categorias.length === 0);
-
-        document.getElementById('filterMedicamento').innerHTML = '<option value="all">Todos os Medicamentos</option>';
-        document.getElementById('filterMedicamento').disabled = true;
-        document.getElementById('filterVendedor').innerHTML = '<option value="all">Todos os Vendedores</option>';
-        document.getElementById('filterVendedor').disabled = true;
-
-        applyFilters();
-    });
-
-    document.getElementById('filterCategoria').addEventListener('change', function() {
-        const cidade = document.getElementById('filterCidade').value;
-        let filtered = allData;
-
-        if (cidade !== 'all') {
-            filtered = filtered.filter(row => row['Cidade'] === cidade);
-        }
-        if (this.value !== 'all') {
-            filtered = filtered.filter(row => row['Categoria'] === this.value);
-        }
-
-        const medicamentos = getUniqueValues(filtered, 'Medicamento');
-        populateSelect('filterMedicamento', medicamentos, 'Todos os Medicamentos');
-        document.getElementById('filterMedicamento').disabled = (medicamentos.length === 0);
-
-        document.getElementById('filterVendedor').innerHTML = '<option value="all">Todos os Vendedores</option>';
-        document.getElementById('filterVendedor').disabled = true;
-
-        applyFilters();
-    });
-
-    document.getElementById('filterMedicamento').addEventListener('change', function() {
-        const cidade = document.getElementById('filterCidade').value;
-        const categoria = document.getElementById('filterCategoria').value;
-        let filtered = allData;
-
-        if (cidade !== 'all') {
-            filtered = filtered.filter(row => row['Cidade'] === cidade);
-        }
-        if (categoria !== 'all') {
-            filtered = filtered.filter(row => row['Categoria'] === categoria);
-        }
-        if (this.value !== 'all') {
-            filtered = filtered.filter(row => row['Medicamento'] === this.value);
-        }
-
-        const vendedores = getUniqueValues(filtered, 'Vendedor');
-        populateSelect('filterVendedor', vendedores, 'Todos os Vendedores');
-        document.getElementById('filterVendedor').disabled = (vendedores.length === 0);
-
-        applyFilters();
-    });
-
-    document.getElementById('filterVendedor').addEventListener('change', function() {
-        applyFilters();
-    });
+    // Event Listeners para os filtros
+    document.getElementById('filterCidade').addEventListener('change', updateAllFiltersAndDashboard);
+    document.getElementById('filterCategoria').addEventListener('change', updateAllFiltersAndDashboard);
+    document.getElementById('filterMedicamento').addEventListener('change', updateAllFiltersAndDashboard);
+    document.getElementById('filterVendedor').addEventListener('change', updateAllFiltersAndDashboard);
 
     document.getElementById('clearBtn').addEventListener('click', function() {
         document.getElementById('filterCidade').value = 'all';
@@ -331,11 +321,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('filterMedicamento').value = 'all';
         document.getElementById('filterVendedor').value = 'all';
 
-        document.getElementById('filterCategoria').disabled = true;
-        document.getElementById('filterMedicamento').disabled = true;
-        document.getElementById('filterVendedor').disabled = true;
-
-        initializeFilters();
-        updateDashboard(allData);
+        // Chama a função para resetar e repopular todos os filtros e o dashboard
+        updateAllFiltersAndDashboard();
     });
 });
