@@ -70,8 +70,13 @@ function parseCSV(csv) {
 
 // Atualizar dashboard
 function updateDashboard(data) {
+    // Se não há dados, limpa gráficos e estatísticas
     if (!data || data.length === 0) {
         console.warn('updateDashboard chamado com dados vazios');
+        updateStats([]); 
+        renderTable([]);
+        renderCharts([]);
+        updateCurrentDate();
         return;
     }
 
@@ -125,7 +130,7 @@ function renderTable(data) {
 
     tbody.innerHTML = '';
 
-    const displayData = data.slice(0, 50);
+    const displayData = data.slice(0, 50); // Limita a 50 linhas para performance
 
     displayData.forEach(row => {
         const tr = document.createElement('tr');
@@ -143,11 +148,16 @@ function renderTable(data) {
 
 // Renderizar gráficos
 function renderCharts(data) {
+    // Destrói gráficos existentes para evitar sobreposição
     if (historicalChart) historicalChart.destroy();
     if (projectionChart) projectionChart.destroy();
 
-    if (data.length === 0) return;
+    if (data.length === 0) {
+        // Se não há dados, os gráficos ficam vazios
+        return;
+    }
 
+    // Agrupa vendas por Data
     const salesByDate = {};
     data.forEach(row => {
         const date = row.Data;
@@ -156,9 +166,11 @@ function renderCharts(data) {
         }
     });
 
+    // Ordena as datas
     const sortedDates = Object.keys(salesByDate).sort();
     const salesValues = sortedDates.map(date => salesByDate[date]);
 
+    // Gráfico de histórico
     const historicalCtx = document.getElementById('historicalChart');
     if (historicalCtx) {
         historicalChart = new Chart(historicalCtx, {
@@ -188,6 +200,7 @@ function renderCharts(data) {
         });
     }
 
+    // Gráfico de projeção (média móvel simples dos últimos 7 dias)
     const projectionCtx = document.getElementById('projectionChart');
     if (projectionCtx && salesValues.length > 0) {
         const last7Days = salesValues.slice(-7);
@@ -259,7 +272,7 @@ function populateFilterDropdown(filterType) {
     const field = fieldMap[filterType];
 
     if (!field || allData.length === 0) {
-        console.warn('Campo não encontrado ou allData vazio');
+        console.warn('Campo não encontrado ou allData vazio para preencher dropdown');
         return;
     }
 
@@ -292,7 +305,7 @@ function updateCurrentDate() {
     }
 }
 
-// Inicialização
+// Inicialização - TODOS os Event Listeners dentro do DOMContentLoaded
 document.addEventListener('DOMContentLoaded', () => {
     loadCSV();
 
