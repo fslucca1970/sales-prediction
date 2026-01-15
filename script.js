@@ -620,3 +620,4 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('projectionMetric').addEventListener('change', applyFilters); // Event listener para a métrica da projeção
     document.getElementById('clearBtn').addEventListener('click', clearFilters);
 });
+
