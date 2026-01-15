@@ -48,6 +48,10 @@ function parseCSV(csv) {
                 row[header] = values[index] || '';
             });
 
+            // Parse da data: DD/MM/YYYY para objeto Date
+            const [day, month, year] = row['Data'].split('/');
+            row['ParsedDate'] = new Date(year, month - 1, day); // Mês é 0-indexado
+
             let rawPrice = row['Preço'].replace('R$', '').trim();
             let precoUnitario = parseFloat(rawPrice);
 
@@ -131,18 +135,436 @@ function aggregateDataByPeriod(data, period) {
     const grouped = {};
 
     data.forEach(row => {
-        // Converte a data do formato DD/MM/YYYY para um objeto Date
-        const [day, month, year] = row['Data'].split('/');
-        const date = new Date(`${year}-${month}-${day}`);
-
+        const date = row['ParsedDate']; // Usa a data já parseada
         let key;
+        let sortKey; // Chave para ordenação
 
         if (period === 'daily') {
-            key = row['Data']; // Mantém a data original
+            key = row['Data']; // Mantém a data original para exibição
+            sortKey = date.toISOString(); // Usa ISO para ordenação
         } else if (period === 'weekly') {
-            // Calcula o início da semana (domingo)
             const startOfWeek = new Date(date);
             startOfWeek.setDate(date.getDate() - date.getDay());
             key = `Semana de ${startOfWeek.toLocaleDateString('pt-BR')}`;
-        } else if
+            sortKey = startOfWeek.toISOString();
+        } else if (period === 'monthly') {
+            key = `${date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}`;
+            sortKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        }
 
+        if (!grouped[sortKey]) { // Agrupa pela chave de ordenação
+            grouped[sortKey] = {
+                periodo: key, // Exibe a chave formatada
+                receita: 0,
+                quantidade: 0,
+                medicamentos: new Set(),
+                categorias: new Set(),
+                cidades: new Set(),
+                vendedores: new Set(),
+                vendas: []
+            };
+        }
+
+        grouped[sortKey].receita += row['Preço Total'];
+        grouped[sortKey].quantidade += row['Quantidade'];
+        grouped[sortKey].medicamentos.add(row['Medicamento']);
+        grouped[sortKey].categorias.add(row['Categoria']);
+        grouped[sortKey].cidades.add(row['Cidade']);
+        grouped[sortKey].vendedores.add(row['Vendedor']);
+        grouped[sortKey].vendas.push(row);
+    });
+
+    const result = Object.values(grouped).map(g => ({
+        ...g,
+        MedicamentosVendidos: Array.from(g.medicamentos).join(', '),
+        CategoriasVendidas: Array.from(g.categorias).join(', '),
+        Cidades: Array.from(g.cidades).join(', '),
+        Vendedores: Array.from(g.vendedores).join(', '),
+        TotalDeVendas: g.vendas.length
+    }));
+
+    // Ordena o resultado final usando a chave de ordenação implícita do Object.values
+    // Se a ordenação por data for crítica, precisaríamos de um passo extra aqui
+    // Mas para os rótulos de categoria do Chart.js, a ordem de inserção já é geralmente suficiente
+    // e o sortKey garante que o Object.values retorne em ordem cronológica se as chaves forem ISO strings.
+    result.sort((a, b) => {
+        // Para garantir a ordenação correta, especialmente para "Semana de" e "Mês de"
+        // precisamos de uma lógica de ordenação mais robusta aqui, baseada nas datas reais.
+        // Como as chaves de agrupamento (sortKey) já são ordenáveis (ISO string ou YYYY-MM),
+        // podemos usá-las para ordenar o array final.
+        const keyA = Object.keys(grouped).find(k => grouped[k].periodo === a.periodo);
+        const keyB = Object.keys(grouped).find(k => grouped[k].periodo === b.periodo);
+        return keyA.localeCompare(keyB);
+    });
+
+    return result;
+}
+
+
+function updateDashboard(data) {
+    updateStats(data);
+    updateCharts(data);
+    updateTable(data);
+    updateLastUpdateDate();
+}
+
+function updateStats(data) {
+    const totalSales = data.length;
+    const totalRevenue = data.reduce((sum, row) => sum + row['Preço Total'], 0);
+    const avgTicket = totalSales > 0 ? totalRevenue / totalSales : 0;
+
+    const productSales = {};
+    data.forEach(row => {
+        const product = row['Medicamento'];
+        productSales[product] = (productSales[product] || 0) + row['Preço Total'];
+    });
+
+    const topProduct = Object.keys(productSales).length > 0
+        ? Object.keys(productSales).reduce((a, b) => productSales[a] > productSales[b] ? a : b)
+        : '-';
+
+    document.getElementById('totalSales').textContent = formatNumber(totalSales);
+    document.getElementById('totalRevenue').textContent = formatCurrency(totalRevenue);
+    document.getElementById('avgTicket').textContent = formatCurrency(avgTicket);
+    document.getElementById('topProduct').textContent = topProduct;
+}
+
+function updateCharts(data) {
+    const period = document.getElementById('filterPeriodo').value;
+    const groupedData = aggregateDataByPeriod(data, period);
+
+    const labels = groupedData.map(g => g.periodo);
+    const revenues = groupedData.map(g => g.receita);
+    const quantities = groupedData.map(g => g.quantidade);
+
+    // --- Gráfico de Histórico de Vendas ---
+    const ctxHistorical = document.getElementById('historicalChart').getContext('2d');
+    if (historicalChart) {
+        historicalChart.destroy();
+    }
+    historicalChart = new Chart(ctxHistorical, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Receita Histórica',
+                data: revenues,
+                borderColor: 'rgb(0, 72, 72)',
+                backgroundColor: 'rgba(0, 72, 72, 0.2)',
+                fill: true,
+                tension: 0.3
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: {
+                    type: 'category',
+                    title: {
+                        display: true,
+                        text: 'Período'
+                    }
+                },
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Receita (R$)'
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return formatCurrency(value);
+                        }
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed.y !== null) {
+                                label += formatCurrency(context.parsed.y);
+                            }
+                            return label;
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // --- Gráfico de Projeção de Vendas ---
+    const ctxProjection = document.getElementById('projectionChart').getContext('2d');
+    if (projectionChart) {
+        projectionChart.destroy();
+    }
+
+    const projectionMetric = document.getElementById('projectionMetric').value;
+
+    let projectionLabels = [];
+    let projectionData = [];
+    let projectionTitle = '';
+    let projectionUnitFormatter = null;
+
+    if (groupedData.length > 0) {
+        const lastDataPoint = groupedData[groupedData.length - 1];
+        let baseValue;
+
+        if (projectionMetric === 'revenue') {
+            baseValue = lastDataPoint.receita;
+            projectionTitle = 'Projeção de Receita';
+            projectionUnitFormatter = formatCurrency;
+        } else { // 'units'
+            baseValue = lastDataPoint.quantidade;
+            projectionTitle = 'Projeção de Unidades';
+            projectionUnitFormatter = formatNumber;
+        }
+
+        // Simples projeção baseada na média dos últimos 3 pontos, com alguma variação
+        const lastThreeValues = groupedData.slice(-3).map(g => projectionMetric === 'revenue' ? g.receita : g.quantidade);
+        const averageLastThree = lastThreeValues.length > 0 ? lastThreeValues.reduce((a, b) => a + b, 0) / lastThreeValues.length : baseValue;
+
+        for (let i = 1; i <= 3; i++) { // Projeta para os próximos 3 períodos
+            let projectedValue = averageLastThree * (1 + (Math.random() - 0.5) * 0.1); // +/- 5% de variação
+            projectionData.push(Math.max(0, Math.round(projectedValue))); // Garante que não seja negativo e arredonda para unidades
+
+            if (period === 'daily') {
+                projectionLabels.push(`+${i} dia`);
+            } else if (period === 'weekly') {
+                projectionLabels.push(`+${i} semana`);
+            } else if (period === 'monthly') {
+                projectionLabels.push(`+${i} mês`);
+            }
+        }
+    }
+
+    projectionChart = new Chart(ctxProjection, {
+        type: 'bar',
+        data: {
+            labels: projectionLabels,
+            datasets: [{
+                label: projectionTitle,
+                data: projectionData,
+                backgroundColor: 'rgba(0, 72, 72, 0.7)',
+                borderColor: 'rgb(0, 72, 72)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Período Futuro'
+                    }
+                },
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: projectionMetric === 'revenue' ? 'Receita (R$)' : 'Unidades'
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return projectionUnitFormatter(value);
+                        }
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed.y !== null) {
+                                label += projectionUnitFormatter(context.parsed.y);
+                            }
+                            return label;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function updateTable(data) {
+    const tbody = document.getElementById('salesTableBody');
+    const tableTitle = document.getElementById('tableTitle');
+    const period = document.getElementById('filterPeriodo').value;
+    tbody.innerHTML = ''; // Limpa a tabela
+
+    let aggregatedTableData = [];
+    let currentTableTitle = '';
+
+    if (period === 'daily') {
+        // Para o modo diário, exibe os dados brutos (até 500 linhas)
+        aggregatedTableData = data.slice(0, 500);
+        currentTableTitle = '📋 Detalhamento Diário (Máximo 500 linhas)';
+    } else {
+        // Para semanal/mensal, agrega os dados para a tabela
+        aggregatedTableData = aggregateDataByPeriod(data, period);
+        currentTableTitle = `📋 Detalhamento ${period === 'weekly' ? 'Semanal' : 'Mensal'}`;
+    }
+
+    tableTitle.textContent = currentTableTitle;
+
+    if (period === 'daily') {
+        // Cabeçalho para detalhamento diário
+        document.getElementById('salesTable').querySelector('thead tr').innerHTML = `
+            <th>Data</th>
+            <th>Medicamento</th>
+            <th>Categoria</th>
+            <th>Quantidade</th>
+            <th>Preço Unitário</th>
+            <th>Preço Total</th>
+            <th>Cidade</th>
+            <th>Vendedor</th>
+        `;
+        aggregatedTableData.forEach(row => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${row['Data']}</td>
+                <td>${row['Medicamento']}</td>
+                <td>${row['Categoria']}</td>
+                <td>${formatNumber(row['Quantidade'])}</td>
+                <td>${formatCurrency(row['Preço Unitário'])}</td>
+                <td>${formatCurrency(row['Preço Total'])}</td>
+                <td>${row['Cidade']}</td>
+                <td>${row['Vendedor']}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    } else {
+        // Cabeçalho para detalhamento agregado (semanal/mensal)
+        document.getElementById('salesTable').querySelector('thead tr').innerHTML = `
+            <th>Período</th>
+            <th>Total de Vendas</th>
+            <th>Receita Total</th>
+            <th>Medicamentos Vendidos</th>
+            <th>Categorias Vendidas</th>
+            <th>Cidades</th>
+            <th>Vendedores</th>
+        `;
+        aggregatedTableData.forEach(row => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${row['periodo']}</td>
+                <td>${formatNumber(row['TotalDeVendas'])}</td>
+                <td>${formatCurrency(row['receita'])}</td>
+                <td>${row['MedicamentosVendidos']}</td>
+                <td>${row['CategoriasVendidas']}</td>
+                <td>${row['Cidades']}</td>
+                <td>${row['Vendedores']}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+}
+
+function updateLastUpdateDate() {
+    const lastUpdateDateElement = document.getElementById('lastUpdateDate');
+    if (lastUpdateDateElement) {
+        const now = new Date();
+        const options = {
+            day: '2-digit',
+            month: 'long',
+            year: 'numeric'
+        };
+        lastUpdateDateElement.textContent = now.toLocaleDateString('pt-BR', options);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM carregado. Iniciando...');
+    loadCSV();
+
+    document.getElementById('filterCidade').addEventListener('change', function() {
+        applyFilters();
+        updateDependentFilters();
+    });
+
+    document.getElementById('filterCategoria').addEventListener('change', function() {
+        applyFilters();
+        updateDependentFilters();
+    });
+
+    document.getElementById('filterMedicamento').addEventListener('change', function() {
+        applyFilters();
+        updateDependentFilters();
+    });
+
+    document.getElementById('filterVendedor').addEventListener('change', function() {
+        applyFilters();
+        updateDependentFilters();
+    });
+
+    document.getElementById('filterPeriodo').addEventListener('change', function() {
+        applyFilters();
+    });
+
+    document.getElementById('projectionMetric').addEventListener('change', function() {
+        applyFilters();
+    });
+
+    document.getElementById('clearBtn').addEventListener('click', function() {
+        document.getElementById('filterCidade').value = 'all';
+        document.getElementById('filterCategoria').value = 'all';
+        document.getElementById('filterMedicamento').value = 'all';
+        document.getElementById('filterVendedor').value = 'all';
+        document.getElementById('filterPeriodo').value = 'daily';
+        document.getElementById('projectionMetric').value = 'revenue';
+
+        initializeFilters();
+        updateDashboard(allData);
+    });
+
+    function updateDependentFilters() {
+        const selectedCidade = document.getElementById('filterCidade').value;
+        const selectedCategoria = document.getElementById('filterCategoria').value;
+        const selectedMedicamento = document.getElementById('filterMedicamento').value;
+        const selectedVendedor = document.getElementById('filterVendedor').value;
+
+        let filteredForNextDropdowns = allData;
+
+        if (selectedCidade !== 'all') {
+            filteredForNextDropdowns = filteredForNextDropdowns.filter(row => row['Cidade'] === selectedCidade);
+        }
+        populateSelect('filterCategoria', getUniqueValues(filteredForNextDropdowns, 'Categoria'), 'Todas as Categorias');
+        if (selectedCategoria !== 'all' && getUniqueValues(filteredForNextDropdowns, 'Categoria').includes(selectedCategoria)) {
+            document.getElementById('filterCategoria').value = selectedCategoria;
+        } else {
+            document.getElementById('filterCategoria').value = 'all';
+        }
+
+        if (selectedCategoria !== 'all') {
+            filteredForNextDropdowns = filteredForNextDropdowns.filter(row => row['Categoria'] === selectedCategoria);
+        }
+        populateSelect('filterMedicamento', getUniqueValues(filteredForNextDropdowns, 'Medicamento'), 'Todos os Medicamentos');
+        if (selectedMedicamento !== 'all' && getUniqueValues(filteredForNextDropdowns, 'Medicamento').includes(selectedMedicamento)) {
+            document.getElementById('filterMedicamento').value = selectedMedicamento;
+        } else {
+            document.getElementById('filterMedicamento').value = 'all';
+        }
+
+        if (selectedMedicamento !== 'all') {
+            filteredForNextDropdowns = filteredForNextDropdowns.filter(row => row['Medicamento'] === selectedMedicamento);
+        }
+        populateSelect('filterVendedor', getUniqueValues(filteredForNextDropdowns, 'Vendedor'), 'Todos os Vendedores');
+        if (selectedVendedor !== 'all' && getUniqueValues(filteredForNextDropdowns, 'Vendedor').includes(selectedVendedor)) {
+            document.getElementById('filterVendedor').value = selectedVendedor;
+        } else {
+            document.getElementById('filterVendedor').value = 'all';
+        }
+    }
+});
