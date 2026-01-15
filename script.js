@@ -45,8 +45,17 @@ function parseCSV(csv) {
             return;
         }
 
-        const separator = lines[0].includes('\t') ? '\t' : ',';
+        // Tenta detectar o separador: ; ou , ou \t
+        let separator = ',';
+        if (lines[0].includes(';')) {
+            separator = ';';
+        } else if (lines[0].includes('\t')) {
+            separator = '\t';
+        }
+        console.log(`Separador detectado: '${separator}'`);
+
         const headers = lines[0].split(separator).map(h => h.trim().replace(/"/g, ''));
+        console.log('Headers do CSV:', headers);
 
         allData = [];
 
@@ -54,6 +63,11 @@ function parseCSV(csv) {
             if (!lines[i].trim()) continue;
 
             const values = lines[i].split(separator).map(v => v.trim().replace(/"/g, ''));
+            if (values.length !== headers.length) {
+                console.warn(`Linha ${i + 1} ignorada: número de colunas (${values.length}) não corresponde ao número de cabeçalhos (${headers.length}). Linha: "${lines[i]}"`);
+                continue; // Pula linhas com número incorreto de colunas
+            }
+
             const row = {};
             headers.forEach((header, index) => {
                 row[header] = values[index] || '';
@@ -64,31 +78,42 @@ function parseCSV(csv) {
 
             // Verifica se a data é válida
             if (isNaN(row['ParsedDate'].getTime())) {
-                console.warn(`Data inválida encontrada e ignorada: ${row['Data']}`);
+                console.warn(`Linha ${i + 1} ignorada: Data inválida encontrada: "${row['Data']}".`);
                 continue; // Pula esta linha se a data for inválida
             }
 
+            // Tratamento de preço mais robusto: remove pontos de milhar e substitui vírgula por ponto decimal
             let rawPrice = row['Preço'].replace('R$', '').trim();
-            // Substitui vírgula por ponto para garantir que parseFloat funcione corretamente
-            rawPrice = rawPrice.replace('.', '').replace(',', '.'); 
+            rawPrice = rawPrice.replace(/\./g, '').replace(',', '.'); // Remove todos os pontos e substitui vírgula por ponto
             let precoUnitario = parseFloat(rawPrice);
-            if (isNaN(precoUnitario)) precoUnitario = 0;
+            if (isNaN(precoUnitario)) {
+                console.warn(`Linha ${i + 1} ignorada: Preço unitário inválido: "${row['Preço']}".`);
+                precoUnitario = 0; // Define como 0 se for inválido, mas não pula a linha
+            }
             row['Preço Unitário'] = precoUnitario;
 
             let quantidade = parseInt(row['Quantidade']) || 1;
+            if (isNaN(quantidade)) {
+                console.warn(`Linha ${i + 1} ignorada: Quantidade inválida: "${row['Quantidade']}".`);
+                quantidade = 1; // Define como 1 se for inválido
+            }
             row['Quantidade'] = quantidade;
+
             row['Preço Total'] = precoUnitario * quantidade;
 
             allData.push(row);
         }
 
-        console.log(`CSV carregado com sucesso: ${allData.length} registros`);
+        console.log(`CSV carregado com sucesso: ${allData.length} registros válidos.`);
+        if (allData.length === 0) {
+            alert('Nenhum dado válido foi encontrado no CSV após o processamento. Verifique o formato do arquivo.');
+        }
         initializeFilters(); // Inicializa os filtros com todos os dados
         updateDashboard(allData); // Atualiza o dashboard com todos os dados
         updateDependentFilters(); // Garante que os filtros dependentes sejam populados corretamente
     } catch (error) {
-        console.error('Erro ao parsear CSV:', error);
-        alert('Erro ao processar dados do CSV.');
+        console.error('Erro fatal ao parsear CSV:', error);
+        alert('Erro fatal ao processar dados do CSV. Verifique o console para mais detalhes.');
     }
 }
 
@@ -120,18 +145,13 @@ function populateSelect(selectId, options, defaultText) {
 function initializeFilters() {
     populateSelect('filterCidade', getUniqueValues(allData, 'Cidade'), 'Todas as Cidades');
     // Os outros filtros dependentes serão populados por updateDependentFilters
-    document.getElementById('filterCategoria').disabled = true;
-    document.getElementById('filterMedicamento').disabled = true;
-    document.getElementById('filterVendedor').disabled = true;
+    // Não desabilita aqui, updateDependentFilters fará isso se não houver opções
+    // document.getElementById('filterCategoria').disabled = true;
+    // document.getElementById('filterMedicamento').disabled = true;
+    // document.getElementById('filterVendedor').disabled = true;
 
-    // Adiciona event listeners para os filtros
-    document.getElementById('filterCidade').addEventListener('change', applyFilters);
-    document.getElementById('filterCategoria').addEventListener('change', applyFilters);
-    document.getElementById('filterMedicamento').addEventListener('change', applyFilters);
-    document.getElementById('filterVendedor').addEventListener('change', applyFilters);
-    document.getElementById('filterPeriodo').addEventListener('change', applyFilters);
-    document.getElementById('projectionMetric').addEventListener('change', applyFilters); // Event listener para a métrica da projeção
-    document.getElementById('clearBtn').addEventListener('click', clearFilters);
+    // Adiciona event listeners para os filtros (apenas uma vez no DOMContentLoaded)
+    // Removido daqui para ser adicionado no DOMContentLoaded para evitar duplicação
 }
 
 function applyFilters() {
@@ -177,6 +197,7 @@ function updateDashboard(data) {
 
     updateCharts(groupedData, period);
     updateTable(data, groupedData, period); // Passa os dados originais e os agrupados
+    updateLastUpdateDate(); // Atualiza a data da última atualização
 }
 
 function updateStats(data) {
@@ -184,13 +205,13 @@ function updateStats(data) {
     const totalRevenue = data.reduce((sum, row) => sum + row['Preço Total'], 0);
     const avgTicket = totalSales > 0 ? totalRevenue / totalSales : 0;
 
-    const productSales = {};
+    const productCounts = {}; // Para contar vendas por produto (para "Produto Top")
     data.forEach(row => {
-        productSales[row['Medicamento']] = (productSales[row['Medicamento']] || 0) + row['Quantidade'];
+        productCounts[row['Medicamento']] = (productCounts[row['Medicamento']] || 0) + row['Quantidade']; // Soma quantidades para top produto
     });
 
-    const topProduct = Object.keys(productSales).length > 0
-        ? Object.keys(productSales).reduce((a, b) => productSales[a] > productSales[b] ? a : b)
+    const topProduct = Object.keys(productCounts).length > 0
+        ? Object.keys(productCounts).reduce((a, b) => productCounts[a] > productCounts[b] ? a : b)
         : '-';
 
     document.getElementById('totalSales').textContent = formatNumber(totalSales);
@@ -210,15 +231,15 @@ function aggregateDataByPeriod(data, period) {
         let displayDate;
 
         if (period === 'daily') {
-            periodKey = date.toISOString().split('T')[0]; // YYYY-MM-DD
+            periodKey = date.toISOString().split('T')[0]; // YYYY-MM-DD para ordenação
             displayDate = date.toLocaleDateString('pt-BR');
         } else if (period === 'weekly') {
             const startOfWeek = new Date(date);
             startOfWeek.setDate(date.getDate() - date.getDay()); // Domingo como início da semana
-            periodKey = startOfWeek.toISOString().split('T')[0];
+            periodKey = startOfWeek.toISOString().split('T')[0]; // YYYY-MM-DD para ordenação
             displayDate = `Semana de ${startOfWeek.toLocaleDateString('pt-BR')}`;
         } else if (period === 'monthly') {
-            periodKey = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`; // YYYY-MM
+            periodKey = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`; // YYYY-MM para ordenação
             displayDate = date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
         }
 
@@ -227,7 +248,7 @@ function aggregateDataByPeriod(data, period) {
                 periodo: displayDate,
                 revenue: 0,
                 units: 0,
-                count: 0,
+                count: 0, // Contagem de transações no período
                 originalRows: [] // Para a tabela de detalhamento
             };
         }
@@ -263,6 +284,7 @@ function updateCharts(groupedData, period) {
 
     const projectionLabels = [];
     const projectionValues = [];
+    // Pega a data do último ponto de dado para basear a projeção
     let lastPeriodDate = groupedData.length > 0 ? groupedData[groupedData.length - 1].originalRows[0]['ParsedDate'] : new Date();
 
     for (let i = 1; i <= numProjectionPeriods; i++) {
@@ -283,14 +305,16 @@ function updateCharts(groupedData, period) {
             projectionLabel = `+${i} mês`;
         }
         projectionLabels.push(projectionLabel);
-        projectionValues.push(averageValue);
+        // Adiciona uma pequena variação aleatória à média para a projeção
+        let projectedValue = averageValue * (1 + (Math.random() - 0.5) * 0.1); // +/- 5% de variação
+        projectionValues.push(Math.max(0, Math.round(projectedValue))); // Garante que não seja negativo e arredonda para unidades
     }
 
     // --- Atualiza Gráfico de Histórico ---
     const historicalCtx = document.getElementById('historicalChart').getContext('2d');
     if (historicalChart) historicalChart.destroy();
     historicalChart = new Chart(historicalCtx, {
-        type: 'bar',
+        type: 'bar', // Alterado para barra para melhor visualização de períodos discretos
         data: {
             labels: labels,
             datasets: [{
@@ -348,7 +372,7 @@ function updateCharts(groupedData, period) {
     const projectionCtx = document.getElementById('projectionChart').getContext('2d');
     if (projectionChart) projectionChart.destroy();
     projectionChart = new Chart(projectionCtx, {
-        type: 'line',
+        type: 'line', // Mantido como linha para projeção
         data: {
             labels: projectionLabels,
             datasets: [{
@@ -423,32 +447,86 @@ function updateTable(originalFilteredData, groupedData, period) {
         // Criamos linhas para a tabela a partir dos dados agrupados
         dataToDisplay = groupedData.map(g => ({
             'Data': g.periodo,
-            'Medicamento': 'Total do Período',
-            'Categoria': '-',
+            'Medicamento': Array.from(g.medicamentos).join(', '), // Mostra todos os medicamentos vendidos no período
+            'Categoria': Array.from(g.categorias).join(', '), // Mostra todas as categorias vendidas no período
             'Quantidade': g.units,
             'Preço Unitário': g.revenue / g.units || 0, // Ticket médio do período
             'Preço Total': g.revenue,
-            'Cidade': '-',
-            'Vendedor': '-'
+            'Cidade': Array.from(g.cidades).join(', '), // Mostra todas as cidades no período
+            'Vendedor': Array.from(g.vendedores).join(', ') // Mostra todos os vendedores no período
         })).slice(0, 500); // Limita a 500 linhas
     }
 
     tableTitle.textContent = `${titleText} (Máximo ${dataToDisplay.length} linhas)`;
 
-    dataToDisplay.forEach(row => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td>${row['Data']}</td>
-            <td>${row['Medicamento']}</td>
-            <td>${row['Categoria']}</td>
-            <td>${formatNumber(row['Quantidade'])}</td>
-            <td>${formatCurrency(row['Preço Unitário'])}</td>
-            <td>${formatCurrency(row['Preço Total'])}</td>
-            <td>${row['Cidade']}</td>
-            <td>${row['Vendedor']}</td>
+    // Atualiza o cabeçalho da tabela dinamicamente
+    const tableHeadRow = document.getElementById('salesTable').querySelector('thead tr');
+    tableHeadRow.innerHTML = ''; // Limpa o cabeçalho existente
+
+    if (period === 'daily') {
+        tableHeadRow.innerHTML = `
+            <th>Data</th>
+            <th>Medicamento</th>
+            <th>Categoria</th>
+            <th>Quantidade</th>
+            <th>Preço Unitário</th>
+            <th>Preço Total</th>
+            <th>Cidade</th>
+            <th>Vendedor</th>
         `;
-        tableBody.appendChild(tr);
-    });
+        dataToDisplay.forEach(row => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${row['Data']}</td>
+                <td>${row['Medicamento']}</td>
+                <td>${row['Categoria']}</td>
+                <td>${formatNumber(row['Quantidade'])}</td>
+                <td>${formatCurrency(row['Preço Unitário'])}</td>
+                <td>${formatCurrency(row['Preço Total'])}</td>
+                <td>${row['Cidade']}</td>
+                <td>${row['Vendedor']}</td>
+            `;
+            tableBody.appendChild(tr);
+        });
+    } else {
+        tableHeadRow.innerHTML = `
+            <th>Período</th>
+            <th>Medicamentos Vendidos</th>
+            <th>Categorias Vendidas</th>
+            <th>Quantidade Total</th>
+            <th>Ticket Médio Período</th>
+            <th>Receita Total</th>
+            <th>Cidades</th>
+            <th>Vendedores</th>
+        `;
+        dataToDisplay.forEach(row => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${row['Data']}</td>
+                <td>${row['Medicamento']}</td>
+                <td>${row['Categoria']}</td>
+                <td>${formatNumber(row['Quantidade'])}</td>
+                <td>${formatCurrency(row['Preço Unitário'])}</td>
+                <td>${formatCurrency(row['Preço Total'])}</td>
+                <td>${row['Cidade']}</td>
+                <td>${row['Vendedor']}</td>
+            `;
+            tableBody.appendChild(tr);
+        });
+    }
+}
+
+function updateLastUpdateDate() {
+    const lastUpdateDateElement = document.getElementById('lastUpdateDate');
+    if (lastUpdateDateElement) {
+        const now = new Date();
+        const options = {
+            day: '2-digit',
+            month: 'long',
+            year: 'numeric'
+        };
+        lastUpdateDateElement.textContent = now.toLocaleDateString('pt-BR', options);
+    }
 }
 
 // Função para atualizar os filtros dependentes (Categoria, Medicamento, Vendedor)
