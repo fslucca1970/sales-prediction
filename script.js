@@ -654,3 +654,4 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('projectionMetric').addEventListener('change', applyFilters);
     document.getElementById('clearBtn').addEventListener('click', clearFilters);
 });
+  
