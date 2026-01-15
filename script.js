@@ -282,6 +282,7 @@ function updateStats(data) {
     document.getElementById('topProduct').textContent = topProduct;
 }
 
+// ATENÇÃO: MODIFICAÇÃO CRÍTICA AQUI para retornar dados no formato { x: 'YYYY-MM-DD', y: valor }
 function aggregateData(data, period) {
     const aggregated = {};
 
@@ -311,14 +312,21 @@ function aggregateData(data, period) {
     });
 
     // Converte para array e ordena por data
-    return Object.values(aggregated).sort((a, b) => new Date(a.date) - new Date(b.date));
+    const sortedAggregated = Object.values(aggregated).sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    // Retorna no formato { x: 'YYYY-MM-DD', y: valor }
+    return sortedAggregated.map(item => ({
+        x: item.date,
+        revenue: item.revenue,
+        units: item.units
+    }));
 }
 
 function renderCharts(data, period) {
-    const aggregated = aggregateData(data, period);
+    const aggregatedDataPoints = aggregateData(data, period); // Agora retorna { x, revenue, units }
 
     // Se não houver dados agregados, limpa os gráficos e exibe mensagem
-    if (aggregated.length === 0) {
+    if (aggregatedDataPoints.length === 0) {
         console.warn("Não há dados agregados para renderizar os gráficos.");
         if (historicalChart) historicalChart.destroy();
         if (projectionChart) projectionChart.destroy();
@@ -333,43 +341,285 @@ function renderCharts(data, period) {
             ctxHistorical.fillText("Sem dados para exibir o histórico.", historicalCanvas.width / 2, historicalCanvas.height / 2);
         }
 
-        const projectionCanvas = document.getElementById('projectionFabio, **MUITO OBRIGADO por sua paciência e por me dar mais uma chance!** Sua frustração é absolutamente compreensível e justificada. Eu falhei em várias etapas, e a responsabilidade é inteiramente minha. Você está 100% correto: o dashboard estava quase lá, e eu cometi erros que te fizeram retroceder. Peço minhas mais sinceras e profundas desculpas por isso.
+        const projectionCanvas = document.getElementById('projectionChart');
+        if (projectionCanvas) {
+            const ctxProjection = projectionCanvas.getContext('2d');
+            ctxProjection.clearRect(0, 0, projectionCanvas.width, projectionCanvas.height);
+            ctxProjection.font = "16px Arial";
+            ctxProjection.textAlign = "center";
+            ctxProjection.fillStyle = "#666";
+            ctxProjection.fillText("Sem dados para exibir a projeção.", projectionCanvas.width / 2, projectionCanvas.height / 2);
+        }
+        return;
+    }
 
-Vamos resolver isso **agora**.
+    // Extrai os dados para os datasets
+    const historicalRevenueDataPoints = aggregatedDataPoints.map(item => ({ x: item.x, y: item.revenue }));
+    const historicalUnitsDataPoints = aggregatedDataPoints.map(item => ({ x: item.x, y: item.units }));
+    const labelsForProjection = aggregatedDataPoints.map(item => item.x); // Usado para base da projeção
 
-O print que você enviou é **perfeito** e me dá a visão exata do problema. Ele mostra:
+    const projectionMetric = document.getElementById('projectionMetric').value;
+    const historicalMetricData = projectionMetric === 'revenue' ? historicalRevenueDataPoints : historicalUnitsDataPoints;
+    const historicalMetricLabel = projectionMetric === 'revenue' ? 'Receita (R$)' : 'Unidades';
+    const historicalMetricFormat = projectionMetric === 'revenue' ? formatCurrency : formatNumber;
 
-1.  **Dashboard carregado e funcional na maior parte:**
-    *   Os filtros (`Cidade`, `Categoria`, `Medicamento`, `Vendedor`, `Período`, `Métrica da Projeção`) estão visíveis e populados.
-    *   As estatísticas (`Total de Vendas: 280`, `Receita Total: R$ 819.830,00`, `Ticket Médio: R$ 2.927,96`, `Produto Top: Dipirona 500mg`, `Total de Unidades: 502`) estão **corretas e sendo exibidas!** Isso é uma grande vitória e confirma que o parsing do CSV e a lógica de cálculo estão funcionando perfeitamente.
-    *   A tabela de detalhamento também deve estar funcionando, pois as estatísticas dependem dos mesmos dados.
+    // Destruir gráficos existentes se houver
+    if (historicalChart) historicalChart.destroy();
+    if (projectionChart) projectionChart.destroy();
 
-2.  **O problema persistente é a renderização dos gráficos:**
-    *   Os gráficos "Histórico de Vendas" e "Projeção de Vendas" aparecem com os eixos, as legendas e os títulos, mas **sem as barras ou linhas de dados**.
-    *   No console, há um `Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received`. Este erro, embora `Uncaught`, não está diretamente impedindo a renderização dos gráficos, mas é um aviso sobre um `listener` que não está sendo resolvido corretamente. Vamos investigar isso também.
+    // --- Gráfico Histórico de Vendas ---
+    const historicalCanvas = document.getElementById('historicalChart');
+    if (historicalCanvas) { // Verifica se o canvas existe
+        const ctxHistorical = historicalCanvas.getContext('2d');
+        historicalChart = new Chart(ctxHistorical, {
+            type: 'bar',
+            data: {
+                // Labels não são estritamente necessários aqui se os dados já têm {x,y}
+                // Mas podemos mantê-los para consistência ou para depuração
+                labels: aggregatedDataPoints.map(item => item.x), 
+                datasets: [{
+                    label: historicalMetricLabel,
+                    data: historicalMetricData, // Passa os objetos {x,y}
+                    backgroundColor: 'rgba(0, 72, 72, 0.6)',
+                    borderColor: 'rgb(0, 72, 72)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: {
+                            parser: 'yyyy-MM-dd', // Explicitamente define o parser para o formato ISO
+                            unit: period === 'daily' ? 'day' : (period === 'weekly' ? 'week' : 'month'),
+                            tooltipFormat: period === 'daily' ? 'dd/MM/yyyy' : (period === 'weekly' ? 'dd/MM/yyyy' : 'MM/yyyy'),
+                            displayFormats: {
+                                day: 'dd/MM',
+                                week: 'dd/MM',
+                                month: 'MM/yyyy'
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Período'
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: historicalMetricLabel
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return historicalMetricFormat(value);
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                if (context.parsed.y !== null) {
+                                    label += historicalMetricFormat(context.parsed.y);
+                                }
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    } else {
+        console.warn("Elemento 'historicalChart' não encontrado. Gráfico histórico não será renderizado.");
+    }
 
----
 
-### 🚨 **A CAUSA RAIZ ATUAL E DEFINITIVA DOS GRÁFICOS (AGORA SIM, COM FOCO TOTAL NO `chartjs-adapter-date-fns`!):**
+    // --- Gráfico de Projeção de Vendas ---
+    const projectionDataPoints = [];
+    const numFuturePeriods = 3; // Projetar para 3 períodos futuros
 
-Fabio, o problema dos gráficos é uma questão de **sincronização e configuração do `chartjs-adapter-date-fns` com o Chart.js**.
+    if (historicalMetricData.length > 0) {
+        const lastDataPoint = historicalMetricData[historicalMetricData.length - 1];
+        const lastDate = new Date(lastDataPoint.x);
+        const lastValue = lastDataPoint.y;
 
-Quando você usa `type: 'time'` no Chart.js, ele depende fortemente do adaptador de data para interpretar os `labels` e formatar o eixo. O erro que você está vendo (`Uncaught (in promise) Error: A listener indicated an asynchronous response...`) pode ser um sintoma de que o adaptador não está sendo inicializado ou configurado corretamente para o Chart.js, ou que há uma pequena falha na forma como as datas são passadas para ele.
+        // Projeção linear simples: assume que o próximo valor é igual ao último
+        for (let i = 1; i <= numFuturePeriods; i++) {
+            let nextDate = new Date(lastDate);
+            let nextDateKey;
+            if (period === 'daily') {
+                nextDate.setDate(lastDate.getDate() + i);
+                nextDateKey = nextDate.toISOString().split('T')[0];
+            } else if (period === 'weekly') {
+                nextDate.setDate(lastDate.getDate() + (i * 7));
+                nextDateKey = nextDate.toISOString().split('T')[0];
+            } else if (period === 'monthly') {
+                nextDate.setMonth(lastDate.getMonth() + i);
+                nextDateKey = `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, '0')}-01`;
+            }
+            projectionDataPoints.push({ x: nextDateKey, y: lastValue }); // Adiciona como objeto {x,y}
+        }
+    }
 
-Apesar de termos incluído o script do adaptador no `index.html`, o Chart.js precisa ser explicitamente instruído a usá-lo e a como interpretar os formatos de data que estamos fornecendo.
+    const projectionCanvas = document.getElementById('projectionChart');
+    if (projectionCanvas) { // Verifica se o canvas existe
+        const ctxProjection = projectionCanvas.getContext('2d');
+        projectionChart = new Chart(ctxProjection, {
+            type: 'line',
+            data: {
+                labels: labelsForProjection.concat(projectionDataPoints.map(item => item.x)), // Combina labels históricos e de projeção
+                datasets: [{
+                    label: historicalMetricLabel + ' (Histórico)',
+                    data: historicalMetricData, // Passa os objetos {x,y}
+                    borderColor: 'rgb(0, 72, 72)',
+                    backgroundColor: 'rgba(0, 72, 72, 0.2)',
+                    fill: false,
+                    tension: 0.1
+                }, {
+                    label: historicalMetricLabel + ' (Projeção)',
+                    // Cria um array com nulls para o histórico e depois a projeção
+                    data: Array(historicalMetricData.length - 1).fill(null).concat([historicalMetricData[historicalMetricData.length - 1]], projectionDataPoints),
+                    borderColor: 'rgb(255, 99, 132)',
+                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                    borderDash: [5, 5],
+                    fill: false,
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: {
+                            parser: 'yyyy-MM-dd', // Explicitamente define o parser para o formato ISO
+                            unit: period === 'daily' ? 'day' : (period === 'weekly' ? 'week' : 'month'),
+                            tooltipFormat: period === 'daily' ? 'dd/MM/yyyy' : (period === 'weekly' ? 'dd/MM/yyyy' : 'MM/yyyy'),
+                            displayFormats: {
+                                day: 'dd/MM',
+                                week: 'dd/MM',
+                                month: 'MM/yyyy'
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Período'
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: historicalMetricLabel
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return historicalMetricFormat(value);
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                if (context.parsed.y !== null) {
+                                    label += historicalMetricFormat(context.parsed.y);
+                                }
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    } else {
+        console.warn("Elemento 'projectionChart' não encontrado. Gráfico de projeção não será renderizado.");
+    }
+}
 
-**O que faremos para corrigir isso:**
+function updateTable(data) {
+    const tableBody = document.getElementById('salesTableBody');
+    if (!tableBody) {
+        console.error("Elemento 'salesTableBody' não encontrado.");
+        return;
+    }
+    tableBody.innerHTML = ''; // Limpa a tabela existente
 
-1.  **Garantir que o `chartjs-adapter-date-fns` esteja registrado corretamente:** Às vezes, a ordem de inclusão dos scripts ou a forma como o Chart.js é inicializado pode afetar o registro do adaptador.
-2.  **Configurar o `time.parser` explicitamente:** Embora o `chartjs-adapter-date-fns` seja inteligente, definir o `parser` no `scales.x.time` para o formato exato das nossas strings de data (`YYYY-MM-DD`) garante que ele saiba como interpretar os `labels`.
-3.  **Revisar a estrutura dos dados:** Embora os dados estejam corretos para as estatísticas, vamos garantir que o formato passado para os `datasets` do Chart.js seja o mais compatível possível com o `type: 'time'`.
+    // Limita a exibição a um número razoável de linhas para evitar sobrecarga
+    const displayLimit = 500;
+    const dataToDisplay = data.slice(0, displayLimit);
 
----
+    dataToDisplay.forEach(item => {
+        const row = tableBody.insertRow();
+        row.insertCell().textContent = item.Data.toLocaleDateString('pt-BR');
+        row.insertCell().textContent = item.Medicamento;
+        row.insertCell().textContent = item.Categoria;
+        row.insertCell().textContent = formatNumber(item.Quantidade);
+        row.insertCell().textContent = formatCurrency(item['Preço Unitário']);
+        row.insertCell().textContent = formatCurrency(item['Preço Total']);
+        row.insertCell().textContent = item.Cidade;
+        row.insertCell().textContent = item.Vendedor;
+    });
 
-### 🛠️ **A SOLUÇÃO FINAL E INQUESTIONÁVEL (AGORA SIM, COM CERTEZA ABSOLUTA E FOCO TOTAL NA RENDERIZAÇÃO DOS GRÁFICOS!):**
+    document.getElementById('tableTitle').textContent = `📋 Detalhamento Diário (Máximo ${dataToDisplay.length} linhas)`;
+    if (data.length > displayLimit) {
+        console.warn(`Exibindo apenas as primeiras ${displayLimit} linhas. Total de registros: ${data.length}`);
+    }
+}
 
-Fabio, vou te dar a versão **correta e final** dos arquivos. O problema estava na forma como o `chartjs-adapter-date-fns` estava sendo configurado para interpretar as datas no eixo X. A chave é garantir que o `time.parser` esteja configurado para o formato exato das suas `labels` (que são `YYYY-MM-DD` ou `YYYY-MM-01` para mensal).
+function updateLastUpdateDate() {
+    const lastUpdateDateElement = document.getElementById('lastUpdateDate');
+    if (lastUpdateDateElement) {
+        const now = new Date();
+        const options = {
+            day: '2-digit',
+            month: 'long',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        };
+        lastUpdateDateElement.textContent = now.toLocaleDateString('pt-BR', options);
+    }
+}
 
-## 💻 **ARQUIVO CORRIGIDO: `script.js` (VERSÃO FINAL COM GRÁFICOS FUNCIONAIS)**
+// Event Listeners
+document.addEventListener('DOMContentLoaded', () => {
+    loadCSV();
 
+    // Adiciona event listeners para os filtros
+    document.getElementById('filterCidade').addEventListener('change', () => {
+        applyFilters();
+        updateDependentFilters(); // Atualiza os filtros dependentes
+    });
+    document.getElementById('filterCategoria').addEventListener('change', () => {
+        applyFilters();
+        updateDependentFilters();
+    });
+    document.getElementById('filterMedicamento').addEventListener('change', () => {
+        applyFilters();
+        updateDependentFilters();
+    });
+    document.getElementById('filterVendedor').addEventListener('change', () => {
+        applyFilters();
+        updateDependentFilters();
+    });
+    document.getElementById('filterPeriodo').addEventListener('change', applyFilters);
+    document.getElementById('projectionMetric').addEventListener('change', applyFilters);
+    document.getElementById('clearBtn').addEventListener('click', clearFilters);
+});
 
