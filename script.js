@@ -129,7 +129,7 @@ function applyFilters() {
 function updateDashboard(data) {
     updateStats(data);
     updateCharts(data);
-    updateTable(data); // Agora updateTable também receberá os dados brutos e fará sua própria agregação se necessário
+    updateTable(data);
     updateLastUpdateDate();
 }
 
@@ -138,14 +138,14 @@ function updateStats(data) {
     const totalRevenue = data.reduce((sum, row) => sum + row['Preço Total'], 0);
     const avgTicket = totalSales > 0 ? totalRevenue / totalSales : 0;
 
-    const productCounts = {};
+    const productSales = {};
     data.forEach(row => {
-        const prod = row['Medicamento'];
-        productCounts[prod] = (productCounts[prod] || 0) + 1;
+        const product = row['Medicamento'];
+        productSales[product] = (productSales[product] || 0) + row['Preço Total'];
     });
 
-    const topProduct = Object.keys(productCounts).length > 0
-        ? Object.keys(productCounts).reduce((a, b) => productCounts[a] > productCounts[b] ? a : b)
+    const topProduct = Object.keys(productSales).length > 0
+        ? Object.keys(productSales).reduce((a, b) => productSales[a] > productSales[b] ? a : b)
         : '-';
 
     document.getElementById('totalSales').textContent = formatNumber(totalSales);
@@ -159,16 +159,21 @@ function aggregateDataForCharts(data, period) {
     const aggregated = {};
 
     data.forEach(row => {
-        const date = new Date(row['Data']);
+        // Converte a data do formato DD/MM/YYYY para um objeto Date
+        const [day, month, year] = row['Data'].split('/');
+        const date = new Date(`${year}-${month}-${day}`);
+
         let key;
 
         if (period === 'daily') {
             key = row['Data']; // Mantém a data original
         } else if (period === 'weekly') {
+            // Calcula a semana (domingo como início)
             const startOfWeek = new Date(date);
             startOfWeek.setDate(date.getDate() - date.getDay());
             key = startOfWeek.toISOString().split('T')[0]; // Formato YYYY-MM-DD para ordenação
         } else if (period === 'monthly') {
+            // Formato YYYY-MM
             key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`; // Formato YYYY-MM
         }
 
@@ -183,7 +188,7 @@ function aggregateDataForCharts(data, period) {
 
 function updateCharts(data) {
     const period = document.getElementById('filterPeriodo').value;
-    const salesByPeriod = aggregateDataForCharts(data, period); // Usa a nova função de agregação para gráficos
+    const salesByPeriod = aggregateDataForCharts(data, period);
 
     const sortedKeys = Object.keys(salesByPeriod).sort();
     const revenues = sortedKeys.map(key => salesByPeriod[key]);
@@ -285,7 +290,7 @@ function updateCharts(data) {
     });
 }
 
-// NOVA FUNÇÃO: Agrega dados para a tabela
+// Função para agregar dados para a tabela
 function aggregateDataForTable(data, period) {
     if (period === 'daily') {
         return data.slice(0, 500); // Retorna os dados brutos para o modo diário
@@ -293,9 +298,11 @@ function aggregateDataForTable(data, period) {
 
     const aggregated = {};
     data.forEach(row => {
-        const date = new Date(row['Data']);
-        let key;
+        // Converte a data do formato DD/MM/YYYY para um objeto Date
+        const [day, month, year] = row['Data'].split('/');
+        const date = new Date(`${year}-${month}-${day}`);
 
+        let key;
         if (period === 'weekly') {
             const startOfWeek = new Date(date);
             startOfWeek.setDate(date.getDate() - date.getDay());
@@ -334,7 +341,6 @@ function aggregateDataForTable(data, period) {
         'Vendedores': Array.from(item['Vendedores']).join(', ')
     }));
 }
-
 
 function updateTable(data) {
     const tbody = document.getElementById('salesTableBody');
@@ -404,7 +410,6 @@ function updateTable(data) {
     }
 }
 
-
 function updateLastUpdateDate() {
     const lastUpdateDateElement = document.getElementById('lastUpdateDate');
     if (lastUpdateDateElement) {
@@ -442,6 +447,7 @@ document.addEventListener('DOMContentLoaded', function() {
         updateDependentFilters();
     });
 
+    // NOVO: Event Listener para o filtro de período
     document.getElementById('filterPeriodo').addEventListener('change', function() {
         applyFilters(); // Re-aplica os filtros para atualizar o dashboard com o novo período
     });
