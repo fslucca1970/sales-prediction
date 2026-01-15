@@ -163,6 +163,8 @@ function renderTable(data) {
         tbody.appendChild(tr);
     });
     console.log(`Tabela 'Detalhamento Diário' preenchida com ${displayData.length} registros.`);
+    // Adiciona um log para verificar o conteúdo do tbody
+    console.log("Conteúdo do tbody após preenchimento:", tbody.innerHTML);
 }
 
 // Renderizar gráficos
@@ -297,10 +299,12 @@ function populateFilterDropdown(filterType) {
 
     if (filterType === 'all') {
         dropdown.classList.add('hidden');
+        console.log("Dropdown 'Selecione:' está oculto (filterType é 'all').");
         return;
     }
 
-    dropdown.classList.remove('hidden');
+    dropdown.classList.remove('hidden'); // Garante que o dropdown esteja visível
+    console.log("Dropdown 'Selecione:' está visível (classe 'hidden' removida).");
 
     let fieldName = '';
 
@@ -319,6 +323,7 @@ function populateFilterDropdown(filterType) {
             break;
         default:
             dropdown.classList.add('hidden');
+            console.warn('Tipo de filtro desconhecido:', filterType);
             return;
     }
 
