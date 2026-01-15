@@ -97,27 +97,31 @@ function parseCSV(csv) {
             }
             row['ParsedDate'] = parsedDate;
 
-            // Tratamento de Preço Unitário
-            let precoUnitarioRaw = row['Preço'] ? row['Preço'].replace('R$', '').replace(/\./g, '').replace(',', '.') : '0';
-            let precoUnitario = parseFloat(precoUnitarioRaw);
-            if (isNaN(precoUnitario)) {
-                console.warn(`Linha ${i + 1} (preço unitário): Preço unitário inválido: '${row['Preço']}'. Usando 0.`);
-                invalidPriceCount++;
-                precoUnitario = 0;
-            }
-            row['Preço Unitário'] = precoUnitario;
+            // Converte valores numéricos, tratando vírgula como separador decimal
+            // Garante que os campos existam antes de tentar replace
+            let quantidadeRaw = row['Quantidade'] ? String(row['Quantidade']).replace('.', '').replace(',', '.') : '0';
+            let precoUnitarioRaw = row['Preço Unitário'] ? String(row['Preço Unitário']).replace('R$', '').replace('.', '').replace(',', '.') : '0';
+            let precoTotalRaw = row['Preço Total'] ? String(row['Preço Total']).replace('R$', '').replace('.', '').replace(',', '.') : '0';
 
-            // Tratamento de Quantidade
-            let quantidadeRaw = row['Quantidade'] ? row['Quantidade'].replace(/\./g, '').replace(',', '.') : '0';
-            let quantidade = parseInt(quantidadeRaw);
-            if (isNaN(quantidade)) {
-                console.warn(`Linha ${i + 1} (quantidade): Quantidade inválida: '${row['Quantidade']}'. Usando 1.`);
+            row['Quantidade'] = parseFloat(quantidadeRaw);
+            row['Preço Unitário'] = parseFloat(precoUnitarioRaw);
+            row['Preço Total'] = parseFloat(precoTotalRaw);
+
+            if (isNaN(row['Quantidade'])) {
+                console.warn(`Linha ${i + 1} (quantidade): Quantidade inválida: '${quantidadeRaw}'. Usando 0.`);
                 invalidQuantityCount++;
-                quantidade = 1;
+                row['Quantidade'] = 0;
             }
-            row['Quantidade'] = quantidade;
-
-            row['Preço Total'] = precoUnitario * quantidade;
+            if (isNaN(row['Preço Unitário'])) {
+                console.warn(`Linha ${i + 1} (preço unitário): Preço unitário inválido: '${precoUnitarioRaw}'. Usando 0.`);
+                invalidPriceCount++;
+                row['Preço Unitário'] = 0;
+            }
+            if (isNaN(row['Preço Total'])) {
+                console.warn(`Linha ${i + 1} (preço total): Preço total inválido: '${precoTotalRaw}'. Usando 0.`);
+                invalidPriceCount++;
+                row['Preço Total'] = 0;
+            }
 
             allData.push(row);
         }
@@ -125,7 +129,7 @@ function parseCSV(csv) {
         console.log(`CSV carregado com sucesso: ${allData.length} registros válidos.`);
         if (invalidDateCount > 0) console.warn(`${invalidDateCount} linhas ignoradas devido a datas inválidas.`);
         if (invalidPriceCount > 0) console.warn(`${invalidPriceCount} preços inválidos foram definidos como 0.`);
-        if (invalidQuantityCount > 0) console.warn(`${invalidQuantityCount} quantidades inválidas foram definidas como 1.`);
+        if (invalidQuantityCount > 0) console.warn(`${invalidQuantityCount} quantidades inválidas foram definidas como 0.`);
         if (columnMismatchCount > 0) console.warn(`${columnMismatchCount} linhas ignoradas devido a número incorreto de colunas.`);
 
         if (allData.length === 0) {
@@ -142,7 +146,7 @@ function parseCSV(csv) {
 
     } catch (error) {
         console.error('Erro ao processar dados do CSV:', error);
-        alert('Erro ao processar dados do CSV. Verifique o console para mais detalhes.');
+        alert('Erro ao processar dados do CSV.');
     }
 }
 
@@ -224,15 +228,15 @@ function updateStats(data) {
     const totalUnits = data.reduce((sum, row) => sum + row['Quantidade'], 0);
     const averageTicket = totalSales > 0 ? totalRevenue / totalSales : 0;
 
-    const productSales = {};
+    const productCounts = {};
     data.forEach(row => {
-        productSales[row['Medicamento']] = (productSales[row['Medicamento']] || 0) + row['Quantidade'];
+        productCounts[row['Medicamento']] = (productCounts[row['Medicamento']] || 0) + row['Quantidade'];
     });
-    const topProduct = Object.keys(productSales).sort((a, b) => productSales[b] - productSales[a])[0] || 'N/A';
+    const topProduct = Object.keys(productCounts).sort((a, b) => productSales[b] - productSales[a])[0] || 'N/A'; // Corrigido para productCounts
 
     document.getElementById('totalSales').textContent = formatNumber(totalSales);
     document.getElementById('totalRevenue').textContent = formatCurrency(totalRevenue);
-    document.getElementById('avgTicket').textContent = formatCurrency(averageTicket); // Corrigido ID
+    document.getElementById('avgTicket').textContent = formatCurrency(averageTicket);
     document.getElementById('topProduct').textContent = topProduct;
 }
 
@@ -286,7 +290,7 @@ function aggregateDataByPeriod(data, period) {
 function renderCharts(data, period) {
     const aggregatedData = aggregateDataByPeriod(data, period);
 
-    const labels = aggregatedData.map(item => item.periodoDisplay); // Usar periodoDisplay para os rótulos
+    const labels = aggregatedData.map(item => item.periodoDisplay);
     const historicalRevenueValues = aggregatedData.map(item => item.revenue);
     const historicalUnitsValues = aggregatedData.map(item => item.units);
 
@@ -295,7 +299,7 @@ function renderCharts(data, period) {
     console.log("Valores de Unidades Históricas:", historicalUnitsValues);
 
     // --- Histórico de Vendas ---
-    const historicalCanvas = document.getElementById('historicalChart'); // ID correto
+    const historicalCanvas = document.getElementById('historicalChart');
     if (!historicalCanvas) {
         console.error("Elemento 'historicalChart' não encontrado.");
         return;
@@ -307,7 +311,7 @@ function renderCharts(data, period) {
 
     if (labels.length > 0 && historicalRevenueValues.length > 0) {
         historicalChart = new Chart(ctxHistorical, {
-            type: 'bar', // Pode ser 'line' ou 'bar'
+            type: 'bar',
             data: {
                 labels: labels,
                 datasets: [{
@@ -361,7 +365,7 @@ function renderCharts(data, period) {
             }
         });
     } else {
-        console.warn("Dados insuficientes para renderizar o gráfico histórico.");
+        console.warn("Dados insuficientes para renderizar o Gráfico de Histórico de Vendas.");
         ctxHistorical.clearRect(0, 0, historicalCanvas.width, historicalCanvas.height);
         ctxHistorical.font = "16px Arial";
         ctxHistorical.textAlign = "center";
@@ -371,7 +375,7 @@ function renderCharts(data, period) {
 
 
     // --- Projeção de Vendas ---
-    const projectionCanvas = document.getElementById('projectionChart'); // ID correto
+    const projectionCanvas = document.getElementById('projectionChart');
     if (!projectionCanvas) {
         console.error("Elemento 'projectionChart' não encontrado.");
         return;
@@ -391,11 +395,11 @@ function renderCharts(data, period) {
     if (historicalDataForProjection.length > 0) {
         const lastDataPointValue = historicalDataForProjection[historicalDataForProjection.length - 1];
         const lastAggregatedItem = aggregatedData[aggregatedData.length - 1];
-        const lastDate = new Date(lastAggregatedItem.date); // Usar a data do item agregado
+        const lastDate = new Date(lastAggregatedItem.date);
 
         for (let i = 1; i <= 3; i++) {
             let nextDate = new Date(lastDate);
-            let projectedValue = lastDataPointValue; // Projeção simples: mantém o último valor
+            let projectedValue = lastDataPointValue;
 
             let nextLabel;
             if (period === 'daily') {
@@ -409,8 +413,7 @@ function renderCharts(data, period) {
                 nextLabel = `+${i} mês`;
             }
             projectionLabels.push(nextLabel);
-            // Adiciona uma pequena variação aleatória à média para a projeção
-            projectedValue = projectedValue * (1 + (Math.random() - 0.5) * 0.1); // +/- 5% de variação
+            projectedValue = projectedValue * (1 + (Math.random() - 0.5) * 0.1);
             projectionValues.push(Math.max(0, Math.round(projectedValue)));
         }
     }
@@ -504,7 +507,7 @@ function updateTable(originalFilteredData, groupedData, period) {
     } else {
         titleText += period === 'weekly' ? 'Semanal' : 'Mensal';
         dataToDisplay = groupedData.map(g => ({
-            'Data': g.periodoDisplay, // Usar o display formatado
+            'Data': g.periodoDisplay,
             'Medicamento': Array.from(g.medicamentos).join(', '),
             'Categoria': Array.from(g.categorias).join(', '),
             'Quantidade': g.units,
