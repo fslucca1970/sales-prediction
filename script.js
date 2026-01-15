@@ -48,10 +48,12 @@ function parseCSV(csv) {
                 row[header] = values[index] || '';
             });
 
-            // CORREÇÃO DA VÍRGULA AQUI
+            // --- CORREÇÃO AQUI: Ajustar o parsing do Preço para o formato "X.YY" (ponto decimal) ---
             let rawPrice = row['Preço'].replace('R$', '').trim();
-            rawPrice = rawPrice.replace(/\./g, '').replace(',', '.');
-            let precoUnitario = parseFloat(rawPrice);
+            // Pelo seu CSV, o ponto JÁ É o separador decimal. Não precisamos remover pontos de milhar
+            // nem substituir vírgulas. Apenas converter diretamente após remover o "R$".
+            let precoUnitario = parseFloat(rawPrice); // Esta é a linha crucial!
+            // --- FIM DA CORREÇÃO ---
 
             if (isNaN(precoUnitario)) precoUnitario = 0;
             row['Preço Unitário'] = precoUnitario;
@@ -104,16 +106,16 @@ function applyFilters() {
     let filtered = allData;
 
     if (cidade !== 'all') {
-        filtered = filtered.filter(row => row['Cidade'] === cidade);
+    filtered = filtered.filter(row => row['Cidade'] === cidade);
     }
     if (categoria !== 'all') {
-        filtered = filtered.filter(row => row['Categoria'] === categoria);
+    filtered = filtered.filter(row => row['Categoria'] === categoria);
     }
     if (medicamento !== 'all') {
-        filtered = filtered.filter(row => row['Medicamento'] === medicamento);
+    filtered = filtered.filter(row => row['Medicamento'] === medicamento);
     }
     if (vendedor !== 'all') {
-        filtered = filtered.filter(row => row['Vendedor'] === vendedor);
+    filtered = filtered.filter(row => row['Vendedor'] === vendedor);
     }
 
     updateDashboard(filtered);
@@ -136,9 +138,9 @@ function updateStats(data) {
         productCounts[prod] = (productCounts[prod] || 0) + 1;
     });
 
-    const topProduct = Object.keys(productCounts).reduce((a, b) => 
-        productCounts[a] > productCounts[b] ? a : b, 'N/A'
-    );
+    const topProduct = Object.keys(productCounts).length > 0
+        ? Object.keys(productCounts).reduce((a, b) => productCounts[a] > productCounts[b] ? a : b)
+        : '-';
 
     document.getElementById('totalSales').textContent = formatNumber(totalSales);
     document.getElementById('totalRevenue').textContent = formatCurrency(totalRevenue);
