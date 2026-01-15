@@ -125,7 +125,8 @@ function populateDropdown(dropdownId, values, defaultValue) {
         option.textContent = value;
         dropdown.appendChild(option);
     });
-    dropdown.disabled = false; // Habilita o dropdown
+    // Habilita o dropdown apenas se houver opções além da padrão
+    dropdown.disabled = (values.length === 0); 
     console.log(`Dropdown '${dropdownId}' populado com ${values.length} valores.`);
 }
 
@@ -227,7 +228,7 @@ function renderCharts(data) {
     if (projectionChart) projectionChart.destroy();
 
     // Gráfico de Histórico de Vendas
-    const historicalCtx = document.getElementById('historicalSalesChart').getContext('2d');
+    const historicalCtx = document.getElementById('historicalChart').getContext('2d'); // ID corrigido
     historicalChart = new Chart(historicalCtx, {
         type: 'line',
         data: {
@@ -511,7 +512,9 @@ document.addEventListener('DOMContentLoaded', () => {
             resetDependentFilters('filterMedicamento', 'Todos os Medicamentos');
             resetDependentFilters('filterVendedor', 'Todos os Vendedores');
 
-            updateDashboard(allData); // Reseta o dashboard para todos os dados
+            // Dispara o evento change no filtro de Cidade para repopular os dependentes
+            filterCidadeEl.dispatchEvent(new Event('change')); 
+            // A chamada a applyFilters() dentro do change de filterCidadeEl já cuidará do updateDashboard(allData)
         });
     }
 });
