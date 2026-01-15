@@ -13,6 +13,18 @@ const formatNumber = (value) => {
     return new Intl.NumberFormat('pt-BR').format(value);
 };
 
+// Função auxiliar para parsear data DD/MM/YYYY de forma robusta
+function parseDateString(dateString) {
+    const parts = dateString.split('/');
+    if (parts.length === 3) {
+        const day = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10) - 1; // Mês é 0-indexado
+        const year = parseInt(parts[2], 10);
+        return new Date(year, month, day);
+    }
+    return new Date('Invalid Date'); // Retorna data inválida se o formato não for o esperado
+}
+
 async function loadCSV() {
     try {
         const response = await fetch('vendas_farmacia.csv');
@@ -48,10 +60,14 @@ function parseCSV(csv) {
                 row[header] = values[index] || '';
             });
 
-            // Parse da data: DD/MM/YYYY para objeto Date de forma robusta
-            const dateParts = row['Data'].split('/');
-            // Cria a data no formato YYYY-MM-DD para o construtor Date
-            row['ParsedDate'] = new Date(`${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`);
+            // Usa a função robusta para parsear a data
+            row['ParsedDate'] = parseDateString(row['Data']);
+
+            // Verifica se a data é válida
+            if (isNaN(row['ParsedDate'].getTime())) {
+                console.warn(`Data inválida encontrada e ignorada: ${row['Data']}`);
+                continue; // Pula esta linha se a data for inválida
+            }
 
             let rawPrice = row['Preço'].replace('R$', '').trim();
             let precoUnitario = parseFloat(rawPrice);
@@ -68,9 +84,9 @@ function parseCSV(csv) {
         }
 
         console.log(`CSV carregado com sucesso: ${allData.length} registros`);
-        initializeFilters();
-        updateDashboard(allData);
-
+        initializeFilters(); // Inicializa os filtros com todos os dados
+        updateDashboard(allData); // Atualiza o dashboard com todos os dados
+        updateDependentFilters(); // Garante que os filtros dependentes sejam populados corretamente
     } catch (error) {
         console.error('Erro ao parsear CSV:', error);
         alert('Erro ao processar dados do CSV.');
@@ -92,15 +108,17 @@ function populateSelect(selectId, options, defaultText) {
         opt.textContent = option;
         select.appendChild(opt);
     });
-    if (options.includes(currentSelection)) {
+    // Tenta restaurar a seleção anterior, se ainda for uma opção válida
+    if (options.includes(currentSelection) || currentSelection === 'all') {
         select.value = currentSelection;
     } else {
-        select.value = 'all';
+        select.value = 'all'; // Volta para 'all' se a opção anterior não existe mais
     }
     select.disabled = false;
 }
 
 function initializeFilters() {
+    // Popula os filtros com base em ALLDATA, não em dados filtrados
     populateSelect('filterCidade', getUniqueValues(allData, 'Cidade'), 'Todas as Cidades');
     populateSelect('filterCategoria', getUniqueValues(allData, 'Categoria'), 'Todas as Categorias');
     populateSelect('filterMedicamento', getUniqueValues(allData, 'Medicamento'), 'Todos os Medicamentos');
@@ -137,6 +155,8 @@ function aggregateDataByPeriod(data, period) {
 
     data.forEach(row => {
         const date = row['ParsedDate']; // Usa a data já parseada
+        if (isNaN(date.getTime())) return; // Pula se a data for inválida
+
         let key;
         let sortKey; // Chave para ordenação
 
@@ -186,6 +206,10 @@ function aggregateDataByPeriod(data, period) {
 
     // Ordena o resultado final usando a chave de ordenação implícita do Object.values
     result.sort((a, b) => {
+        // Para garantir a ordenação correta, especialmente para "Semana de" e "Mês de"
+        // precisamos de uma lógica de ordenação mais robusta aqui, baseada nas datas reais.
+        // Como as chaves de agrupamento (sortKey) já são ordenáveis (ISO string ou YYYY-MM),
+        // podemos usá-las para ordenar o array final.
         const keyA = Object.keys(grouped).find(k => grouped[k].periodo === a.periodo);
         const keyB = Object.keys(grouped).find(k => grouped[k].periodo === b.periodo);
         return keyA.localeCompare(keyB);
