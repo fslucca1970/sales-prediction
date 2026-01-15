@@ -169,7 +169,7 @@ function populateSelect(elementId, values, defaultOptionText) {
     const currentSelection = select.value;
     select.innerHTML = `<option value="all">${defaultOptionText}</option>`;
     values.forEach(value => {
-        const option = document.RcreateElement('option');
+        const option = document.createElement('option'); // CORREÇÃO AQUI: de RcreateElement para createElement
         option.value = value;
         option.textContent = value;
         select.appendChild(option);
@@ -237,7 +237,6 @@ function updateStats(data) {
     data.forEach(row => {
         productCounts[row['Medicamento']] = (productCounts[row['Medicamento']] || 0) + row['Quantidade'];
     });
-    // CORREÇÃO AQUI: Usar productCounts para ordenar, não productSales
     const topProduct = Object.keys(productCounts).length > 0
         ? Object.keys(productCounts).sort((a, b) => productCounts[b] - productCounts[a])[0]
         : 'N/A';
