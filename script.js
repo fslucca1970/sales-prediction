@@ -48,9 +48,12 @@ function parseCSV(csv) {
                 row[header] = values[index] || '';
             });
 
-            // CORREÇÃO DA VÍRGULA AQUI (mantida a correção que funcionou)
+            // --- CORREÇÃO AQUI: Ajustar o parsing do Preço para o formato "X.YY" (ponto decimal) ---
             let rawPrice = row['Preço'].replace('R$', '').trim();
-            let precoUnitario = parseFloat(rawPrice); 
+            // Pelo seu CSV, o ponto JÁ É o separador decimal. Não precisamos remover pontos de milhar
+            // nem substituir vírgulas. Apenas converter diretamente após remover o "R$".
+            let precoUnitario = parseFloat(rawPrice); // Esta é a linha crucial!
+            // --- FIM DA CORREÇÃO ---
 
             if (isNaN(precoUnitario)) precoUnitario = 0;
             row['Preço Unitário'] = precoUnitario;
@@ -64,8 +67,8 @@ function parseCSV(csv) {
         }
 
         console.log(`CSV carregado com sucesso: ${allData.length} registros`);
-        // Chamada inicial para popular todos os filtros e o dashboard
-        updateAllFiltersAndDashboard();
+        initializeFilters(); // Agora esta função vai popular TODOS os filtros
+        updateDashboard(allData);
 
     } catch (error) {
         console.error('Erro ao parsear CSV:', error);
@@ -87,65 +90,17 @@ function populateSelect(selectId, options, defaultText) {
         opt.textContent = option;
         select.appendChild(opt);
     });
-    // AQUI ESTÁ A MUDANÇA: O filtro só é desabilitado se não houver NENHUMA opção além da padrão
-    select.disabled = (options.length === 0); 
+    // Remove a desabilitação inicial, pois os filtros serão sempre populados
+    select.disabled = false; 
 }
 
-// Nova função para atualizar todos os filtros e o dashboard
-function updateAllFiltersAndDashboard() {
-    let currentFilteredData = allData;
-
-    const cidade = document.getElementById('filterCidade').value;
-    const categoria = document.getElementById('filterCategoria').value;
-    const medicamento = document.getElementById('filterMedicamento').value;
-    const vendedor = document.getElementById('filterVendedor').value;
-
-    // Aplica os filtros selecionados para determinar as opções dos próximos
-    if (cidade !== 'all') {
-        currentFilteredData = currentFilteredData.filter(row => row['Cidade'] === cidade);
-    }
-    // Popula Categoria
-    const categorias = getUniqueValues(currentFilteredData, 'Categoria');
-    populateSelect('filterCategoria', categorias, 'Todas as Categorias');
-    // Mantém a seleção atual se ainda for válida
-    if (categoria !== 'all' && categorias.includes(categoria)) {
-        document.getElementById('filterCategoria').value = categoria;
-    } else {
-        document.getElementById('filterCategoria').value = 'all';
-    }
-
-    // Aplica o filtro de Categoria para determinar as opções dos próximos
-    if (categoria !== 'all') {
-        currentFilteredData = currentFilteredData.filter(row => row['Categoria'] === categoria);
-    }
-    // Popula Medicamento
-    const medicamentos = getUniqueValues(currentFilteredData, 'Medicamento');
-    populateSelect('filterMedicamento', medicamentos, 'Todos os Medicamentos');
-    // Mantém a seleção atual se ainda for válida
-    if (medicamento !== 'all' && medicamentos.includes(medicamento)) {
-        document.getElementById('filterMedicamento').value = medicamento;
-    } else {
-        document.getElementById('filterMedicamento').value = 'all';
-    }
-
-    // Aplica o filtro de Medicamento para determinar as opções dos próximos
-    if (medicamento !== 'all') {
-        currentFilteredData = currentFilteredData.filter(row => row['Medicamento'] === medicamento);
-    }
-    // Popula Vendedor
-    const vendedores = getUniqueValues(currentFilteredData, 'Vendedor');
-    populateSelect('filterVendedor', vendedores, 'Todos os Vendedores');
-    // Mantém a seleção atual se ainda for válida
-    if (vendedor !== 'all' && vendedores.includes(vendedor)) {
-        document.getElementById('filterVendedor').value = vendedor;
-    } else {
-        document.getElementById('filterVendedor').value = 'all';
-    }
-
-    // Finalmente, aplica TODOS os filtros selecionados para atualizar o dashboard
-    applyFilters();
+// Modificado: Agora initializeFilters popula TODOS os filtros na carga inicial
+function initializeFilters() {
+    populateSelect('filterCidade', getUniqueValues(allData, 'Cidade'), 'Todas as Cidades');
+    populateSelect('filterCategoria', getUniqueValues(allData, 'Categoria'), 'Todas as Categorias');
+    populateSelect('filterMedicamento', getUniqueValues(allData, 'Medicamento'), 'Todos os Medicamentos');
+    populateSelect('filterVendedor', getUniqueValues(allData, 'Vendedor'), 'Todos os Vendedores');
 }
-
 
 function applyFilters() {
     const cidade = document.getElementById('filterCidade').value;
@@ -310,10 +265,28 @@ document.addEventListener('DOMContentLoaded', function() {
     loadCSV();
 
     // Event Listeners para os filtros
-    document.getElementById('filterCidade').addEventListener('change', updateAllFiltersAndDashboard);
-    document.getElementById('filterCategoria').addEventListener('change', updateAllFiltersAndDashboard);
-    document.getElementById('filterMedicamento').addEventListener('change', updateAllFiltersAndDashboard);
-    document.getElementById('filterVendedor').addEventListener('change', updateAllFiltersAndDashboard);
+    // Cada filtro agora apenas chama applyFilters e repopula os outros filtros com base nos dados filtrados
+    // Isso permite que cada filtro "restrinja" as opções dos outros, mas sem desabilitá-los.
+
+    document.getElementById('filterCidade').addEventListener('change', function() {
+        applyFilters();
+        updateDependentFilters();
+    });
+
+    document.getElementById('filterCategoria').addEventListener('change', function() {
+        applyFilters();
+        updateDependentFilters();
+    });
+
+    document.getElementById('filterMedicamento').addEventListener('change', function() {
+        applyFilters();
+        updateDependentFilters();
+    });
+
+    document.getElementById('filterVendedor').addEventListener('change', function() {
+        applyFilters();
+        updateDependentFilters();
+    });
 
     document.getElementById('clearBtn').addEventListener('click', function() {
         document.getElementById('filterCidade').value = 'all';
@@ -321,8 +294,49 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('filterMedicamento').value = 'all';
         document.getElementById('filterVendedor').value = 'all';
 
-        // Chama a função para resetar e repopular todos os filtros e o dashboard
-        updateAllFiltersAndDashboard();
+        initializeFilters(); // Repopula todos os filtros com base em allData
+        updateDashboard(allData); // Atualiza o dashboard com todos os dados
     });
+
+    // Nova função para atualizar os filtros dependentes
+    function updateDependentFilters() {
+        let currentFilteredData = allData;
+
+        const selectedCidade = document.getElementById('filterCidade').value;
+        const selectedCategoria = document.getElementById('filterCategoria').value;
+        const selectedMedicamento = document.getElementById('filterMedicamento').value;
+        const selectedVendedor = document.getElementById('filterVendedor').value;
+
+        // Filtra os dados com base nas seleções atuais
+        if (selectedCidade !== 'all') {
+            currentFilteredData = currentFilteredData.filter(row => row['Cidade'] === selectedCidade);
+        }
+        if (selectedCategoria !== 'all') {
+            currentFilteredData = currentFilteredData.filter(row => row['Categoria'] === selectedCategoria);
+        }
+        if (selectedMedicamento !== 'all') {
+            currentFilteredData = currentFilteredData.filter(row => row['Medicamento'] === selectedMedicamento);
+        }
+        if (selectedVendedor !== 'all') {
+            currentFilteredData = currentFilteredData.filter(row => row['Vendedor'] === selectedVendedor);
+        }
+
+        // Repopula os filtros com base nos dados filtrados, mantendo a seleção atual
+        const currentCidade = document.getElementById('filterCidade').value;
+        const currentCategoria = document.getElementById('filterCategoria').value;
+        const currentMedicamento = document.getElementById('filterMedicamento').value;
+        const currentVendedor = document.getElementById('filterVendedor').value;
+
+        populateSelect('filterCidade', getUniqueValues(allData, 'Cidade'), 'Todas as Cidades');
+        document.getElementById('filterCidade').value = currentCidade;
+
+        populateSelect('filterCategoria', getUniqueValues(currentFilteredData, 'Categoria'), 'Todas as Categorias');
+        document.getElementById('filterCategoria').value = currentCategoria;
+
+        populateSelect('filterMedicamento', getUniqueValues(currentFilteredData, 'Medicamento'), 'Todos os Medicamentos');
+        document.getElementById('filterMedicamento').value = currentMedicamento;
+
+        populateSelect('filterVendedor', getUniqueValues(currentFilteredData, 'Vendedor'), 'Todos os Vendedores');
+        document.getElementById('filterVendedor').value = currentVendedor;
+    }
 });
- 
