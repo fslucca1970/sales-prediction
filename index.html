@@ -45,7 +45,6 @@
                 </select>
             </div>
 
-            <!-- NOVO FILTRO DE PERÍODO -->
             <div class="filter-group">
                 <label for="filterPeriodo">Período:</label>
                 <select id="filterPeriodo">
@@ -86,13 +85,21 @@
             </div>
             <div class="chart-container">
                 <h3>🔮 Projeção de Vendas</h3>
+                <!-- NOVO SELETOR PARA A MÉTRICA DA PROJEÇÃO -->
+                <div class="filter-group" style="margin-bottom: 15px;">
+                    <label for="projectionMetric">Métrica da Projeção:</label>
+                    <select id="projectionMetric">
+                        <option value="revenue">Receita (R$)</option>
+                        <option value="units">Unidades</option>
+                    </select>
+                </div>
                 <canvas id="projectionChart"></canvas>
             </div>
         </section>
 
         <!-- Tabela de Detalhamento -->
         <section class="table-section">
-            <h3>📋 Detalhamento Diário (Máximo 500 linhas)</h3>
+            <h3 id="tableTitle">📋 Detalhamento Diário (Máximo 500 linhas)</h3>
             <div class="table-container">
                 <table id="salesTable">
                     <thead>
@@ -118,7 +125,7 @@
     <footer>
         <p>Última atualização: <span id="lastUpdateDate">-</span></p>
     </footer>
-
     <script src="script.js"></script>
 </body>
 </html>
+
