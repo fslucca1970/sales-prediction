@@ -24,30 +24,37 @@ function parseCSV(csv) {
 
         if (lines.length < 2) {
             console.error('CSV vazio ou inválido');
-            alert('CSV vazio ou inválido');
+            alert('CSV vazio ou inválido.');
             return;
         }
 
         // Detecta o separador (tabulação ou vírgula)
         const firstLine = lines[0];
         const separator = firstLine.includes('\t') ? '\t' : ',';
+
         const headers = lines[0].split(separator).map(h => h.trim().replace(/"/g, ''));
         console.log("Cabeçalhos do CSV:", headers);
 
         allData = [];
+
         for (let i = 1; i < lines.length; i++) {
             if (!lines[i].trim()) continue;
+
             const values = lines[i].split(separator).map(v => v.trim().replace(/"/g, ''));
             const row = {};
+
             headers.forEach((header, index) => {
                 row[header] = values[index] || '';
             });
+
             allData.push(row);
         }
 
         console.log("Dados carregados (allData):", allData);
         console.log("Total de registros:", allData.length);
-        console.log("Primeira linha de dados:", allData[0]);
+        if (allData.length > 0) {
+            console.log("Primeira linha de dados:", allData[0]);
+        }
 
         if (allData.length === 0) {
             alert('Nenhum dado foi carregado do CSV.');
@@ -63,7 +70,7 @@ function parseCSV(csv) {
             if (filterTypeElement) {
                 populateFilterDropdown(filterTypeElement.value);
             }
-        }, 100); // Pequeno delay para garantir que o DOM esteja completamente renderizado
+        }, 100);
 
     } catch (error) {
         console.error('Erro ao fazer parsing do CSV:', error);
@@ -82,6 +89,7 @@ function updateDashboard(data) {
         updateCurrentDate();
         return;
     }
+
     updateStats(data);
     renderTable(data);
     renderCharts(data);
@@ -91,10 +99,13 @@ function updateDashboard(data) {
 // Atualizar estatísticas
 function updateStats(data) {
     const totalSales = data.length;
+
     const totalRevenue = data.reduce((sum, row) => {
         if (!row.Preço) return sum;
+
         const priceStr = row.Preço.toString().replace(/R\$\s*/g, '').replace(/\s/g, '').replace(',', '.');
         const price = parseFloat(priceStr);
+
         return sum + (isNaN(price) ? 0 : price);
     }, 0);
 
@@ -102,7 +113,7 @@ function updateStats(data) {
 
     const products = {};
     data.forEach(row => {
-        if (row.Medicamento) {
+        if (row.Medicamento) { // Usando 'Medicamento'
             products[row.Medicamento] = (products[row.Medicamento] || 0) + 1;
         }
     });
@@ -129,17 +140,20 @@ function renderTable(data) {
         console.error('Elemento tableBody não encontrado');
         return;
     }
+
     tbody.innerHTML = '';
+
     const displayData = data.slice(0, 50); // Limita a 50 linhas para performance
+
     displayData.forEach(row => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td>${row.Data || '-'}</td>
-            <td>${row.Medicamento || '-'}</td>
+            <td>${row.Data || '-'}</td>         <!-- Usando 'Data' -->
+            <td>${row.Medicamento || '-'}</td>  <!-- Usando 'Medicamento' -->
             <td>${row.Categoria || '-'}</td>
-            <td>${row.Cidade || '-'}</td>
-            <td>${row.Vendedor || '-'}</td>
-            <td>${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(parseFloat(row.Preço.toString().replace(/R\$\s*/g, '').replace(/\s/g, '').replace(',', '.')) || 0)}</td>
+            <td>${row.Cidade || '-'}</td>       <!-- Usando 'Cidade' -->
+            <td>${row.Vendedor || '-'}</td>     <!-- Usando 'Vendedor' -->
+            <td>${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(parseFloat(row.Preço.toString().replace(/R\$\s*/g, '').replace(/\s/g, '').replace(',', '.')) || 0)}</td> <!-- Usando 'Preço' -->
         `;
         tbody.appendChild(tr);
     });
@@ -165,7 +179,7 @@ function renderCharts(data) {
     // Agrupa vendas por Data
     const salesByDate = {};
     data.forEach(row => {
-        const date = row.Data; // Usando 'Data' conforme seu CSV
+        const date = row.Data; // Usando 'Data'
         if (date) {
             salesByDate[date] = (salesByDate[date] || 0) + 1;
         }
@@ -282,7 +296,6 @@ function populateFilterDropdown(filterType) {
 
     dropdown.classList.remove('hidden');
 
-    const uniqueValues = new Set();
     let fieldName = '';
 
     switch (filterType) {
@@ -303,6 +316,7 @@ function populateFilterDropdown(filterType) {
             return;
     }
 
+    const uniqueValues = new Set();
     allData.forEach(row => {
         if (row[fieldName]) {
             uniqueValues.add(row[fieldName]);
@@ -359,14 +373,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            const fieldMap = {
-                'medicamento': 'Medicamento',
-                'cidade': 'Cidade',
-                'categoria': 'Categoria',
-                'vendedor': 'Vendedor'
-            };
+            let field = '';
+            switch (filterType) {
+                case 'medicamento':
+                    field = 'Medicamento';
+                    break;
+                case 'cidade':
+                    field = 'Cidade';
+                    break;
+                case 'categoria':
+                    field = 'Categoria';
+                    break;
+                case 'vendedor':
+                    field = 'Vendedor';
+                    break;
+                default:
+                    console.warn('Tipo de filtro desconhecido:', filterType);
+                    return;
+            }
 
-            const field = fieldMap[filterType];
             const filtered = allData.filter(row => row[field] === filterValue);
 
             console.log(`Filtrado por ${filterType} = ${filterValue}:`, filtered.length, 'registros');
