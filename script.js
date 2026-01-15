@@ -23,6 +23,7 @@ function parseCSV(csv) {
 
     if (lines.length < 2) {
         console.error('CSV vazio ou inválido');
+        alert('CSV vazio ou inválido');
         return;
     }
 
@@ -31,6 +32,8 @@ function parseCSV(csv) {
     const separator = firstLine.includes('\t') ? '\t' : ',';
 
     const headers = lines[0].split(separator).map(h => h.trim().replace(/"/g, ''));
+
+    console.log("Cabeçalhos do CSV:", headers);
 
     allData = [];
 
@@ -49,6 +52,7 @@ function parseCSV(csv) {
 
     console.log("Dados carregados (allData):", allData);
     console.log("Total de registros:", allData.length);
+    console.log("Primeira linha de dados:", allData[0]);
 
     if (allData.length === 0) {
         alert('Nenhum dado foi carregado do CSV.');
@@ -68,11 +72,6 @@ function parseCSV(csv) {
 function updateDashboard(data) {
     if (!data || data.length === 0) {
         console.warn('updateDashboard chamado com dados vazios');
-        // Limpa gráficos e estatísticas se não houver dados
-        updateStats([]); 
-        renderTable([]);
-        renderCharts([]);
-        updateCurrentDate();
         return;
     }
 
@@ -87,9 +86,8 @@ function updateStats(data) {
     const totalSales = data.length;
 
     const totalRevenue = data.reduce((sum, row) => {
-        if (!row.Preço) return sum; // Usando 'Preço'
+        if (!row.Preço) return sum;
 
-        // Remove "R$", espaços e substitui vírgula por ponto
         const priceStr = row.Preço.toString().replace(/R\$\s*/g, '').replace(/\s/g, '').replace(',', '.');
         const price = parseFloat(priceStr);
 
@@ -100,7 +98,7 @@ function updateStats(data) {
 
     const products = {};
     data.forEach(row => {
-        if (row.Medicamento) { // Usando 'Medicamento'
+        if (row.Medicamento) {
             products[row.Medicamento] = (products[row.Medicamento] || 0) + 1;
         }
     });
@@ -109,12 +107,15 @@ function updateStats(data) {
         ? Object.keys(products).reduce((a, b) => products[a] > products[b] ? a : b)
         : '-';
 
-    document.getElementById('totalSales').textContent = totalSales;
-    document.getElementById('totalRevenue').textContent = 
-        new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalRevenue);
-    document.getElementById('avgTicket').textContent = 
-        new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(avgTicket);
-    document.getElementById('topProduct').textContent = topProduct;
+    const totalSalesEl = document.getElementById('totalSales');
+    const totalRevenueEl = document.getElementById('totalRevenue');
+    const avgTicketEl = document.getElementById('avgTicket');
+    const topProductEl = document.getElementById('topProduct');
+
+    if (totalSalesEl) totalSalesEl.textContent = totalSales;
+    if (totalRevenueEl) totalRevenueEl.textContent = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalRevenue);
+    if (avgTicketEl) avgTicketEl.textContent = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(avgTicket);
+    if (topProductEl) topProductEl.textContent = topProduct;
 }
 
 // Renderizar tabela
@@ -124,18 +125,17 @@ function renderTable(data) {
 
     tbody.innerHTML = '';
 
-    // Limita a 50 linhas para performance
     const displayData = data.slice(0, 50);
 
     displayData.forEach(row => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td>${row.Data || '-'}</td>         <!-- CORRIGIDO: row.Data -->
-            <td>${row.Medicamento || '-'}</td>  <!-- CORRIGIDO: row.Medicamento -->
+            <td>${row.Data || '-'}</td>
+            <td>${row.Medicamento || '-'}</td>
             <td>${row.Categoria || '-'}</td>
-            <td>${row.Cidade || '-'}</td>       <!-- CORRIGIDO: row.Cidade -->
-            <td>${row.Vendedor || '-'}</td>     <!-- CORRIGIDO: row.Vendedor -->
-            <td>${row.Preço || '-'}</td>        <!-- CORRIGIDO: row.Preço -->
+            <td>${row.Cidade || '-'}</td>
+            <td>${row.Vendedor || '-'}</td>
+            <td>${row.Preço || '-'}</td>
         `;
         tbody.appendChild(tr);
     });
@@ -143,29 +143,22 @@ function renderTable(data) {
 
 // Renderizar gráficos
 function renderCharts(data) {
-    // Garante que os gráficos sejam destruídos mesmo se não houver dados para renderizar
     if (historicalChart) historicalChart.destroy();
     if (projectionChart) projectionChart.destroy();
 
-    if (data.length === 0) {
-        // Se não há dados, os gráficos ficam vazios ou com uma mensagem
-        return;
-    }
+    if (data.length === 0) return;
 
-    // Agrupa vendas por Data (CORRIGIDO AQUI)
     const salesByDate = {};
     data.forEach(row => {
-        const date = row.Data; // Usando 'Data'
+        const date = row.Data;
         if (date) {
             salesByDate[date] = (salesByDate[date] || 0) + 1;
         }
     });
 
-    // Ordena as datas
     const sortedDates = Object.keys(salesByDate).sort();
     const salesValues = sortedDates.map(date => salesByDate[date]);
 
-    // Gráfico de histórico
     const historicalCtx = document.getElementById('historicalChart');
     if (historicalCtx) {
         historicalChart = new Chart(historicalCtx, {
@@ -184,29 +177,22 @@ function renderCharts(data) {
             options: {
                 responsive: true,
                 maintainAspectRatio: true,
-                plugins: {
-                    legend: { position: 'top' }
-                },
+                plugins: { legend: { position: 'top' } },
                 scales: {
                     y: {
                         beginAtZero: true,
-                        ticks: {
-                            stepSize: 1 // Garante que os ticks sejam inteiros
-                        }
+                        ticks: { stepSize: 1 }
                     }
                 }
             }
         });
     }
 
-    // Gráfico de projeção (média móvel simples dos últimos 7 dias)
     const projectionCtx = document.getElementById('projectionChart');
     if (projectionCtx && salesValues.length > 0) {
-        // Calcula média dos últimos 7 dias (ou todos se menos de 7)
         const last7Days = salesValues.slice(-7);
         const avgSales = last7Days.reduce((a, b) => a + b, 0) / last7Days.length;
 
-        // Projeção para os próximos 7 dias
         const projectionLabels = [];
         const projectionValues = [];
 
@@ -234,15 +220,11 @@ function renderCharts(data) {
             options: {
                 responsive: true,
                 maintainAspectRatio: true,
-                plugins: {
-                    legend: { position: 'top' }
-                },
+                plugins: { legend: { position: 'top' } },
                 scales: {
                     y: {
                         beginAtZero: true,
-                        ticks: {
-                            stepSize: 1 // Garante que os ticks sejam inteiros
-                        }
+                        ticks: { stepSize: 1 }
                     }
                 }
             }
@@ -268,15 +250,16 @@ function populateFilterDropdown(filterType) {
     dropdown.classList.remove('hidden');
 
     const fieldMap = {
-        'medicamento': 'Medicamento', // CORRIGIDO: 'Medicamento'
-        'cidade': 'Cidade',           // CORRIGIDO: 'Cidade'
+        'medicamento': 'Medicamento',
+        'cidade': 'Cidade',
         'categoria': 'Categoria',
-        'vendedor': 'Vendedor'        // CORRIGIDO: 'Vendedor'
+        'vendedor': 'Vendedor'
     };
 
     const field = fieldMap[filterType];
 
     if (!field || allData.length === 0) {
+        console.warn('Campo não encontrado ou allData vazio');
         return;
     }
 
@@ -285,6 +268,8 @@ function populateFilterDropdown(filterType) {
             .map(row => row[field])
             .filter(value => value && value.trim() !== '')
     )].sort();
+
+    console.log(`Valores únicos para ${filterType}:`, uniqueValues);
 
     uniqueValues.forEach(value => {
         const option = document.createElement('option');
@@ -307,12 +292,10 @@ function updateCurrentDate() {
     }
 }
 
-// Inicialização - TODOS os Event Listeners dentro do DOMContentLoaded
+// Inicialização
 document.addEventListener('DOMContentLoaded', () => {
-    // Carrega o CSV
     loadCSV();
 
-    // Event listener para mudança no tipo de filtro
     const filterTypeEl = document.getElementById('filterType');
     if (filterTypeEl) {
         filterTypeEl.addEventListener('change', (e) => {
@@ -320,7 +303,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Event listener para botão de filtrar
     const filterBtn = document.getElementById('filterBtn');
     if (filterBtn) {
         filterBtn.addEventListener('click', () => {
@@ -333,10 +315,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const fieldMap = {
-                'medicamento': 'Medicamento', // CORRIGIDO: 'Medicamento'
-                'cidade': 'Cidade',           // CORRIGIDO: 'Cidade'
+                'medicamento': 'Medicamento',
+                'cidade': 'Cidade',
                 'categoria': 'Categoria',
-                'vendedor': 'Vendedor'        // CORRIGIDO: 'Vendedor'
+                'vendedor': 'Vendedor'
             };
 
             const field = fieldMap[filterType];
@@ -348,7 +330,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Event listener para botão de limpar
     const clearBtn = document.getElementById('clearBtn');
     if (clearBtn) {
         clearBtn.addEventListener('click', () => {
