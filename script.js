@@ -270,12 +270,20 @@ function aggregateDataByPeriod(data, period) {
                 revenue: 0,
                 units: 0,
                 count: 0, // Contagem de transações no período
+                medicamentos: new Set(), // Adicionado para a tabela
+                categorias: new Set(),   // Adicionado para a tabela
+                cidades: new Set(),      // Adicionado para a tabela
+                vendedores: new Set(),   // Adicionado para a tabela
                 originalRows: [] // Para a tabela de detalhamento
             };
         }
         aggregated[periodKey].revenue += row['Preço Total'];
         aggregated[periodKey].units += row['Quantidade'];
         aggregated[periodKey].count++;
+        aggregated[periodKey].medicamentos.add(row['Medicamento']); // Popula o set
+        aggregated[periodKey].categorias.add(row['Categoria']);     // Popula o set
+        aggregated[periodKey].cidades.add(row['Cidade']);           // Popula o set
+        aggregated[periodKey].vendedores.add(row['Vendedor']);     // Popula o set
         aggregated[periodKey].originalRows.push(row); // Armazena as linhas originais
     });
 
@@ -292,6 +300,8 @@ function updateCharts(groupedData, period) {
     const labels = groupedData.map(g => g.periodo);
     const historicalValues = groupedData.map(g => isRevenue ? g.revenue : g.units);
 
+    console.log("Dados para Histórico de Vendas:", { labels, historicalValues, isRevenue });
+
     // --- Lógica de Projeção (muito simplificada para demonstração) ---
     // Calcula a média dos últimos N períodos para projetar os próximos M períodos
     const numPeriodsForAverage = Math.min(groupedData.length, 5); // Média dos últimos 5 períodos
@@ -306,23 +316,29 @@ function updateCharts(groupedData, period) {
     const projectionLabels = [];
     const projectionValues = [];
     // Pega a data do último ponto de dado para basear a projeção
-    let lastPeriodDate = groupedData.length > 0 ? groupedData[groupedData.length - 1].originalRows[0]['ParsedDate'] : new Date();
+    // Adicionado fallback para new Date() se groupedData estiver vazio
+    let lastPeriodDate = groupedData.length > 0 && groupedData[groupedData.length - 1].originalRows.length > 0 
+                         ? groupedData[groupedData.length - 1].originalRows[0]['ParsedDate'] 
+                         : new Date();
 
     for (let i = 1; i <= numProjectionPeriods; i++) {
         let nextDate;
         let projectionLabel;
 
+        // Cria uma nova data para cada projeção para evitar mutação
+        const baseDate = new Date(lastPeriodDate); 
+
         if (period === 'daily') {
-            nextDate = new Date(lastPeriodDate);
-            nextDate.setDate(lastPeriodDate.getDate() + i);
+            nextDate = new Date(baseDate);
+            nextDate.setDate(baseDate.getDate() + i);
             projectionLabel = `+${i} dia`;
         } else if (period === 'weekly') {
-            nextDate = new Date(lastPeriodDate);
-            nextDate.setDate(lastPeriodDate.getDate() + (i * 7));
+            nextDate = new Date(baseDate);
+            nextDate.setDate(baseDate.getDate() + (i * 7));
             projectionLabel = `+${i} semana`;
         } else if (period === 'monthly') {
-            nextDate = new Date(lastPeriodDate);
-            nextDate.setMonth(lastPeriodDate.getMonth() + i);
+            nextDate = new Date(baseDate);
+            nextDate.setMonth(baseDate.getMonth() + i);
             projectionLabel = `+${i} mês`;
         }
         projectionLabels.push(projectionLabel);
@@ -330,6 +346,8 @@ function updateCharts(groupedData, period) {
         let projectedValue = averageValue * (1 + (Math.random() - 0.5) * 0.1); // +/- 5% de variação
         projectionValues.push(Math.max(0, Math.round(projectedValue))); // Garante que não seja negativo e arredonda para unidades
     }
+    console.log("Dados para Projeção de Vendas:", { projectionLabels, projectionValues, isRevenue });
+
 
     // --- Atualiza Gráfico de Histórico ---
     const historicalCtx = document.getElementById('historicalChart').getContext('2d');
@@ -503,7 +521,7 @@ function updateTable(originalFilteredData, groupedData, period) {
                 <td>${row['Categoria']}</td>
                 <td>${formatNumber(row['Quantidade'])}</td>
                 <td>${formatCurrency(row['Preço Unitário'])}</td>
-                <td>${formatCurrency(row['Preço Total'])}</td>
+                <td>${row['Preço Total']}</td>
                 <td>${row['Cidade']}</td>
                 <td>${row['Vendedor']}</td>
             `;
@@ -620,4 +638,3 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('projectionMetric').addEventListener('change', applyFilters); // Event listener para a métrica da projeção
     document.getElementById('clearBtn').addEventListener('click', clearFilters);
 });
-
