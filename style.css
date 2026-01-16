@@ -100,6 +100,11 @@ main {
     padding: 20px;
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    /* AQUI ESTÁ A CORREÇÃO CRÍTICA: Definir uma altura para o contêiner do gráfico */
+    height: 400px; /* Altura fixa para evitar o "esticamento" */
+    /* Ou, se preferir uma altura máxima flexível: */
+    /* max-height: 50vh; */
+    /* overflow: hidden; /* Opcional: esconde conteúdo que exceda a altura */
 }
 .chart-container h3 {
     margin-bottom: 15px;
