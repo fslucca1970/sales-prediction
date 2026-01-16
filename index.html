@@ -76,18 +76,12 @@
         <!-- Gráficos -->
         <section class="charts">
             <div class="chart-container">
-                <h3>📊 Histórico de Vendas</h3>
+                <h3>📊 Histórico de Vendas (Receita)</h3>
                 <canvas id="historicalChart"></canvas> 
             </div>
             <div class="chart-container">
-                <h3>🔮 Projeção de Vendas</h3>
-                <div class="filter-group" style="margin-bottom: 15px;">
-                    <label for="projectionMetric">Métrica da Projeção:</label>
-                    <select id="projectionMetric">
-                        <option value="revenue">Receita (R$)</option>
-                        <option value="units">Unidades</option>
-                    </select>
-                </div>
+                <h3>🔮 Projeção de Vendas (Receita)</h3>
+                <!-- REMOVIDO: Seletor de Métrica da Projeção -->
                 <canvas id="projectionChart"></canvas> 
             </div>
         </section>
@@ -121,4 +115,3 @@
     <script src="script.js"></script>
 </body>
 </html>
- 
