@@ -9,154 +9,153 @@ Data,Medicamento,Categoria,Quantidade,Preço,Cidade,Vendedor,id_cliente
 2024-01-18,Enalapril 10mg,Anti-hipertensivo,1,R$ 14.50,Belo Horizonte,Mariana Costa,CLI008
 2024-01-19,Sinvastatina 20mg,Hipolipemiante,2,R$ 19.80,Curitiba,Carlos Silva,CLI009
 2024-01-19,Captopril 25mg,Anti-hipertensivo,1,R$ 11.20,Porto Alegre,Ana Santos,CLI010
-2024-01-20,Fluoxetina 20mg,Antidepressivo,3,R$ 16.50,São Paulo,Roberto Lima,CLI011
-2024-01-20,Clonazepam 2mg,Ansiolítico,1,R$ 24.30,Rio de Janeiro,Mariana Costa,CLI012
-2024-01-21,Diclofenaco 50mg,Anti-inflamatório,2,R$ 13.70,Belo Horizonte,Carlos Silva,CLI013
-2024-01-21,Ranitidina 150mg,Antiácido,1,R$ 17.90,Curitiba,Ana Santos,CLI014
-2024-01-22,Atorvastatina 10mg,Hipolipemiante,3,R$ 21.60,Porto Alegre,Roberto Lima,CLI015
-2024-01-22,Levotiroxina 50mcg,Hormônio tireoidiano,1,R$ 19.40,São Paulo,Mariana Costa,CLI016
-2024-01-23,Cetirizina 10mg,Antialérgico,2,R$ 9.80,Rio de Janeiro,Carlos Silva,CLI017
-2024-01-23,Prednisona 20mg,Corticosteroide,1,R$ 14.90,Belo Horizonte,Ana Santos,CLI018
-2024-01-24,Azitromicina 500mg,Antibiótico,3,R$ 32.50,Curitiba,Roberto Lima,CLI019
-2024-01-24,Dexametasona 4mg,Corticosteroide,1,R$ 11.80,Porto Alegre,Mariana Costa,CLI0020
-2024-01-25,Paracetamol 500mg,Analgésico,2,R$ 8.50,São Paulo,Carlos Silva,CLI021
-2024-01-25,Hidroclorotiazida 25mg,Diurético,1,R$ 13.20,Rio de Janeiro,Ana Santos,CLI022
-2024-01-26,Metronidazol 250mg,Antibiótico,3,R$ 15.60,Belo Horizonte,Roberto Lima,CLI023
-2024-01-26,Propranolol 40mg,Beta-bloqueador,1,R$ 12.90,Curitiba,Mariana Costa,CLI024
-2024-01-27,Glibenclamida 5mg,Antidiabético,2,R$ 10.50,Porto Alegre,Carlos Silva,CLI025
-2024-01-27,Ibuprofeno 600mg,Anti-inflamatório,1,R$ 12.30,São Paulo,Ana Santos,CLI026
-2024-01-28,Omeprazol 20mg,Antiácido,3,R$ 15.80,Rio de Janeiro,Roberto Lima,CLI027
-2024-01-28,Losartana 50mg,Anti-hipertensivo,1,R$ 18.90,Belo Horizonte,Mariana Costa,CLI028
-2024-01-29,Metformina 850mg,Antidiabético,2,R$ 22.40,Curitiba,Carlos Silva,CLI029
-2024-01-29,Amoxicilina 500mg,Antibiótico,1,R$ 28.70,Porto Alegre,Ana Santos,CLI030
-2024-01-30,Dipirona 500mg,Analgésico,4,R$ 6.90,São Paulo,Roberto Lima,CLI031
-2024-01-30,Enalapril 10mg,Anti-hipertensivo,1,R$ 14.50,Rio de Janeiro,Mariana Costa,CLI032
-2024-01-31,Sinvastatina 20mg,Hipolipemiante,2,R$ 19.80,Belo Horizonte,Carlos Silva,CLI033
-2024-01-31,Captopril 25mg,Anti-hipertensivo,1,R$ 11.20,Curitiba,Ana Santos,CLI034
-2024-02-01,Fluoxetina 20mg,Antidepressivo,3,R$ 16.50,Porto Alegre,Roberto Lima,CLI035
-2024-02-01,Clonazepam 2mg,Ansiolítico,1,R$ 24.30,São Paulo,Mariana Costa,CLI036
-2024-02-02,Diclofenaco 50mg,Anti-inflamatório,2,R$ 13.70,Rio de Janeiro,Carlos Silva,CLI037
-2024-02-02,Ranitidina 150mg,Antiácido,1,R$ 17.90,Belo Horizonte,Ana Santos,CLI038
-2024-02-03,Atorvastatina 10mg,Hipolipemiante,3,R$ 21.60,Curitiba,Roberto Lima,CLI039
-2024-02-03,Levotiroxina 50mcg,Hormônio tireoidiano,1,R$ 19.40,Porto Alegre,Mariana Costa,CLI040
-2024-02-04,Cetirizina 10mg,Antialérgico,2,R$ 9.80,São Paulo,Carlos Silva,CLI041
-2024-02-04,Prednisona 20mg,Corticosteroide,1,R$ 14.90,Rio de Janeiro,Ana Santos,CLI042
-2024-02-05,Azitromicina 500mg,Antibiótico,3,R$ 32.50,Belo Horizonte,Roberto Lima,CLI043
-2024-02-05,Dexametasona 4mg,Corticosteroide,1,R$ 11.80,Curitiba,Mariana Costa,CLI044
-2024-02-06,Paracetamol 500mg,Analgésico,2,R$ 8.50,Porto Alegre,Carlos Silva,CLI045
-2024-02-06,Hidroclorotiazida 25mg,Diurético,1,R$ 13.20,São Paulo,Ana Santos,CLI0046
-2024-02-07,Metronidazol 250mg,Antibiótico,3,R$ 15.60,Rio de Janeiro,Roberto Lima,CLI047
-2024-02-07,Propranolol 40mg,Beta-bloqueador,1,R$ 12.90,Belo Horizonte,Mariana Costa,CLI048
-2024-02-08,Glibenclamida 5mg,Antidiabético,2,R$ 10.50,Curitiba,Carlos Silva,CLI049
-2024-02-08,Ibuprofeno 600mg,Anti-inflamatório,1,R$ 12.30,Porto Alegre,Ana Santos,CLI050
-2024-02-09,Omeprazol 20mg,Antiácido,3,R$ 15.80,São Paulo,Roberto Lima,CLI051
-2024-02-09,Losartana 50mg,Anti-hipertensivo,1,R$ 18.90,Rio de Janeiro,Mariana Costa,CLI052
-2024-02-10,Metformina 850mg,Antidiabético,2,R$ 22.40,Belo Horizonte,Carlos Silva,CLI053
-2024-02-10,Amoxicilina 500mg,Antibiótico,1,R$ 28.70,Curitiba,Ana Santos,CLI054
-2024-02-11,Dipirona 500mg,Analgésico,4,R$ 6.90,Porto Alegre,Roberto Lima,CLI055
-2024-02-11,Enalapril 10mg,Anti-hipertensivo,1,R$ 14.50,São Paulo,Mariana Costa,CLI056
-2024-02-12,Sinvastatina 20mg,Hipolipemiante,2,R$ 19.80,Rio de Janeiro,Carlos Silva,CLI057
-2024-02-12,Captopril 25mg,Anti-hipertensivo,1,R$ 11.20,Belo Horizonte,Ana Santos,CLI058
-2024-02-13,Fluoxetina 20mg,Antidepressivo,3,R$ 16.50,Curitiba,Roberto Lima,CLI059
-2024-02-13,Clonazepam 2mg,Ansiolítico,1,R$ 24.30,Porto Alegre,Mariana Costa,CLI060
-2024-02-14,Diclofenaco 50mg,Anti-inflamatório,2,R$ 13.70,São Paulo,Carlos Silva,CLI061
-2024-02-14,Ranitidina 150mg,Antiácido,1,R$ 17.90,Rio de Janeiro,Ana Santos,CLI062
-2024-02-15,Atorvastatina 10mg,Hipolipemiante,3,R$ 21.60,Belo Horizonte,Roberto Lima,CLI063
-2024-02-15,Levotiroxina 50mcg,Hormônio tireoidiano,1,R$ 19.40,Curitiba,Mariana Costa,CLI064
-2024-02-16,Cetirizina 10mg,Antialérgico,2,R$ 9.80,Porto Alegre,Carlos Silva,CLI065
-2024-02-16,Prednisona 20mg,Corticosteroide,1,R$ 14.90,São Paulo,Ana Santos,CLI066
-2024-02-17,Azitromicina 500mg,Antibiótico,3,R$ 32.50,Rio de Janeiro,Roberto Lima,CLI067
-2024-02-17,Dexametasona 4mg,Corticosteroide,1,R$ 11.80,Belo Horizonte,Mariana Costa,CLI068
-2024-02-18,Paracetamol 500mg,Analgésico,2,R$ 8.50,Curitiba,Carlos Silva,CLI069
-2024-02-18,Hidroclorotiazida 25mg,Diurético,1,R$ 13.20,Porto Alegre,Ana Santos,CLI070
-2024-02-19,Metronidazol 250mg,Antibiótico,3,R$ 15.60,São Paulo,Roberto Lima,CLI071
-2024-02-19,Propranolol 40mg,Beta-bloqueador,1,R$ 12.90,Rio de Janeiro,Mariana Costa,CLI072
-2024-02-20,Glibenclamida 5mg,Antidiabético,2,R$ 10.50,Belo Horizonte,Carlos Silva,CLI073
-2024-02-20,Ibuprofeno 600mg,Anti-inflamatório,1,R$ 12.30,Curitiba,Ana Santos,CLI074
-2024-02-21,Omeprazol 20mg,Antiácido,3,R$ 15.80,Porto Alegre,Roberto Lima,CLI075
-2024-02-21,Losartana 50mg,Anti-hipertensivo,1,R$ 18.90,São Paulo,Mariana Costa,CLI076
-2024-02-22,Metformina 850mg,Antidiabético,2,R$ 22.40,Rio de Janeiro,Carlos Silva,CLI077
-2024-02-22,Amoxicilina 500mg,Antibiótico,1,R$ 28.70,Belo Horizonte,Ana Santos,CLI078
-2024-02-23,Dipirona 500mg,Analgésico,4,R$ 6.90,Curitiba,Roberto Lima,CLI079
-2024-02-23,Enalapril 10mg,Anti-hipertensivo,1,R$ 14.50,Porto Alegre,Mariana Costa,CLI080
-2024-02-24,Sinvastatina 20mg,Hipolipemiante,2,R$ 19.80,São Paulo,Carlos Silva,CLI081
-2024-02-24,Captopril 25mg,Anti-hipertensivo,1,R$ 11.20,Rio de Janeiro,Ana Santos,CLI082
-2024-02-25,Fluoxetina 20mg,Antidepressivo,3,R$ 16.50,Belo Horizonte,Roberto Lima,CLI083
-2024-02-25,Clonazepam 2mg,Ansiolítico,1,R$ 24.30,Curitiba,Mariana Costa,CLI084
-2024-02-26,Diclofenaco 50mg,Anti-inflamatório,2,R$ 13.70,Porto Alegre,Carlos Silva,CLI205
-2024-02-26,Ranitidina 150mg,Antiácido,1,R$ 17.90,São Paulo,Ana Santos,CLI206
-2024-02-27,Atorvastatina 10mg,Hipolipemiante,3,R$ 21.60,Rio de Janeiro,Roberto Lima,CLI207
-2024-02-27,Levotiroxina 50mcg,Hormônio tireoidiano,1,R$ 19.40,Belo Horizonte,Mariana Costa,CLI208
-2024-02-28,Cetirizina 10mg,Antialérgico,2,R$ 9.80,Curitiba,Carlos Silva,CLI209
-2024-02-28,Prednisona 20mg,Corticosteroide,1,R$ 14.90,Porto Alegre,Ana Santos,CLI210
-2024-02-29,Azitromicina 500mg,Antibiótico,3,R$ 32.50,São Paulo,Roberto Lima,CLI211
-2024-02-29,Dexametasona 4mg,Corticosteroide,1,R$ 11.80,Rio de Janeiro,Mariana Costa,CLI212
-2024-03-01,Paracetamol 500mg,Analgésico,2,R$ 8.50,Belo Horizonte,Carlos Silva,CLI213
-2024-03-01,Hidroclorotiazida 25mg,Diurético,1,R$ 13.20,Curitiba,Ana Santos,CLI214
-2024-03-02,Metronidazol 250mg,Antibiótico,3,R$ 15.60,Porto Alegre,Roberto Lima,CLI215
-2024-03-02,Propranolol 40mg,Beta-bloqueador,1,R$ 12.90,São Paulo,Mariana Costa,CLI216
-2024-03-03,Glibenclamida 5mg,Antidiabético,2,R$ 10.50,Rio de Janeiro,Carlos Silva,CLI217
-2024-03-03,Ibuprofeno 600mg,Anti-inflamatório,1,R$ 12.30,Belo Horizonte,Ana Santos,CLI218
-2024-03-04,Omeprazol 20mg,Antiácido,3,R$ 15.80,Curitiba,Roberto Lima,CLI219
-2024-03-04,Losartana 50mg,Anti-hipertensivo,1,R$ 18.90,Porto Alegre,Mariana Costa,CLI220
-2024-03-05,Metformina 850mg,Antidiabético,2,R$ 22.40,São Paulo,Carlos Silva,CLI221
-2024-03-05,Amoxicilina 500mg,Antibiótico,1,R$ 28.70,Rio de Janeiro,Ana Santos,CLI222
-2024-03-06,Dipirona 500mg,Analgésico,4,R$ 6.90,Belo Horizonte,Roberto Lima,CLI223
-2024-03-06,Enalapril 10mg,Anti-hipertensivo,1,R$ 14.50,Curitiba,Mariana Costa,CLI224
-2024-03-07,Sinvastatina 20mg,Hipolipemiante,2,R$ 19.80,Porto Alegre,Carlos Silva,CLI225
-2024-03-07,Captopril 25mg,Anti-hipertensivo,1,R$ 11.20,São Paulo,Ana Santos,CLI226
-2024-03-08,Fluoxetina 20mg,Antidepressivo,3,R$ 16.50,Rio de Janeiro,Roberto Lima,CLI227
-2024-03-08,Clonazepam 2mg,Ansiolítico,1,R$ 24.30,Belo Horizonte,Mariana Costa,CLI228
-2024-03-09,Diclofenaco 50mg,Anti-inflamatório,2,R$ 13.70,Curitiba,Carlos Silva,CLI229
-2024-03-09,Ranitidina 150mg,Antiácido,1,R$ 17.90,Porto Alegre,Ana Santos,CLI230
-2024-03-10,Atorvastatina 10mg,Hipolipemiante,3,R$ 21.60,São Paulo,Roberto Lima,CLI231
-2024-03-10,Levotiroxina 50mcg,Hormônio tireoidiano,1,R$ 19.40,Rio de Janeiro,Mariana Costa,CLI232
-2024-03-11,Cetirizina 10mg,Antialérgico,2,R$ 9.80,Belo Horizonte,Carlos Silva,CLI233
-2024-03-11,Prednisona 20mg,Corticosteroide,1,R$ 14.90,Curitiba,Ana Santos,CLI234
-2024-03-12,Azitromicina 500mg,Antibiótico,3,R$ 32.50,Porto Alegre,Roberto Lima,CLI235
-2024-03-12,Dexametasona 4mg,Corticosteroide,1,R$ 11.80,São Paulo,Mariana Costa,CLI236
-2024-03-13,Paracetamol 500mg,Analgésico,2,R$ 8.50,Rio de Janeiro,Carlos Silva,CLI237
-2024-03-13,Hidroclorotiazida 25mg,Diurético,1,R$ 13.20,Belo Horizonte,Ana Santos,CLI238
-2024-03-14,Metronidazol 250mg,Antibiótico,3,R$ 15.60,Curitiba,Roberto Lima,CLI239
-2024-03-14,Propranolol 40mg,Beta-bloqueador,1,R$ 12.90,Porto Alegre,Mariana Costa,CLI240
-2024-03-15,Glibenclamida 5mg,Antidiabético,2,R$ 10.50,São Paulo,Carlos Silva,CLI241
-2024-03-15,Ibuprofeno 600mg,Anti-inflamatório,1,R$ 12.30,Rio de Janeiro,Ana Santos,CLI242
-2024-03-16,Omeprazol 20mg,Antiácido,3,R$ 15.80,Belo Horizonte,Roberto Lima,CLI243
-2024-03-16,Losartana 50mg,Anti-hipertensivo,1,R$ 18.90,Curitiba,Mariana Costa,CLI244
-2024-03-17,Metformina 850mg,Antidiabético,2,R$ 22.40,Porto Alegre,Carlos Silva,CLI245
-2024-03-17,Amoxicilina 500mg,Antibiótico,1,R$ 28.70,São Paulo,Ana Santos,CLI246
-2024-03-18,Dipirona 500mg,Analgésico,4,R$ 6.90,Rio de Janeiro,Roberto Lima,CLI247
-2024-03-18,Enalapril 10mg,Anti-hipertensivo,1,R$ 14.50,Belo Horizonte,Mariana Costa,CLI248
-2024-03-19,Sinvastatina 20mg,Hipolipemiante,2,R$ 19.80,Curitiba,Carlos Silva,CLI249
-2024-03-19,Captopril 25mg,Anti-hipertensivo,1,R$ 11.20,Porto Alegre,Ana Santos,CLI250
-2024-03-20,Fluoxetina 20mg,Antidepressivo,3,R$ 16.50,São Paulo,Roberto Lima,CLI251
-2024-03-20,Clonazepam 2mg,Ansiolítico,1,R$ 24.30,Rio de Janeiro,Mariana Costa,CLI252
-2024-03-21,Diclofenaco 50mg,Anti-inflamatório,2,R$ 13.70,Belo Horizonte,Carlos Silva,CLI253
-2024-03-21,Ranitidina 150mg,Antiácido,1,R$ 17.90,Curitiba,Ana Santos,CLI254
-2024-03-22,Atorvastatina 10mg,Hipolipemiante,3,R$ 21.60,Porto Alegre,Roberto Lima,CLI255
-2024-03-22,Levotiroxina 50mcg,Hormônio tireoidiano,1,R$ 19.40,São Paulo,Mariana Costa,CLI256
-2024-03-23,Cetirizina 10mg,Antialérgico,2,R$ 9.80,Rio de Janeiro,Carlos Silva,CLI257
-2024-03-23,Prednisona 20mg,Corticosteroide,1,R$ 14.90,Belo Horizonte,Ana Santos,CLI258
-2024-03-24,Azitromicina 500mg,Antibiótico,3,R$ 32.50,Curitiba,Roberto Lima,CLI259
-2024-03-24,Dexametasona 4mg,Corticosteroide,1,R$ 11.80,Porto Alegre,Mariana Costa,CLI260
-2024-03-25,Paracetamol 500mg,Analgésico,2,R$ 8.50,São Paulo,Carlos Silva,CLI261
-2024-03-25,Hidroclorotiazida 25mg,Diurético,1,R$ 13.20,Rio de Janeiro,Ana Santos,CLI262
-2024-03-26,Metronidazol 250mg,Antibiótico,3,R$ 15.60,Belo Horizonte,Roberto Lima,CLI263
-2024-03-26,Propranolol 40mg,Beta-bloqueador,1,R$ 12.90,Curitiba,Mariana Costa,CLI264
-2024-03-27,Glibenclamida 5mg,Antidiabético,2,R$ 10.50,Porto Alegre,Carlos Silva,CLI265
-2024-03-27,Ibuprofeno 600mg,Anti-inflamatório,1,R$ 12.30,São Paulo,Ana Santos,CLI266
-2024-03-28,Omeprazol 20mg,Antiácido,3,R$ 15.80,Rio de Janeiro,Roberto Lima,CLI267
-2024-03-28,Losartana 50mg,Anti-hipertensivo,1,R$ 18.90,Belo Horizonte,Mariana Costa,CLI268
-2024-03-29,Metformina 850mg,Antidiabético,2,R$ 22.40,Curitiba,Carlos Silva,CLI269
-2024-03-29,Amoxicilina 500mg,Antibiótico,1,R$ 28.70,Porto Alegre,Ana Santos,CLI270
-2024-03-30,Dipirona 500mg,Analgésico,4,R$ 6.90,São Paulo,Roberto Lima,CLI271
-2024-03-30,Enalapril 10mg,Anti-hipertensivo,1,R$ 14.50,Rio de Janeiro,Mariana Costa,CLI272
-2024-03-31,Sinvastatina 20mg,Hipolipemiante,2,R$ 19.80,Belo Horizonte,Carlos Silva,CLI273
-2024-03-31,Captopril 25mg,Anti-hipertensivo,1,R$ 11.20,Curitiba,Ana Santos,CLI274
-2024-04-01,Fluoxetina 20mg,Antidepressivo,3,R$ 16.50,Porto Alegre,Roberto Lima,CLI275
-2024-04-01,Clonazepam 2mg,Ansiolítico,1,R$ 24.30,São Paulo,Mariana Costa,CLI276
-2024-04-02,Diclofenaco 50mg,Anti-inflamatório,2,R$ 13.70,Rio de Janeiro,Carlos Silva,CLI277
-2024-04-02,Ranitidina 150mg,Antiácido,1,R$ 17.90,Belo Horizonte,Ana Santos,CLI278
-2024-04-03,Atorvastatina 10mg,Hipolipemiante,3,R$ 21.60,Curitiba,Roberto Lima,CLI279
-2024-04-03,Levotiroxina 50mcg,Hormônio tireoidiano,1,R$ 19.40,Porto Alegre,Mariana Costa,CLI280
- 
+2024-01-20,Fluoxetina 20mg,Antidepressivo,3,R$ 16.50,São Paulo,Carlos Silva,CLI011
+2024-01-20,Clonazepam 2mg,Ansiolítico,1,R$ 24.30,Rio de Janeiro,Ana Santos,CLI012
+2024-01-21,Diclofenaco 50mg,Anti-inflamatório,2,R$ 13.70,Belo Horizonte,Roberto Lima,CLI013
+2024-01-21,Ranitidina 150mg,Antiácido,1,R$ 17.90,Curitiba,Mariana Costa,CLI014
+2024-01-22,Atorvastatina 10mg,Hipolipemiante,3,R$ 21.60,Porto Alegre,Carlos Silva,CLI015
+2024-01-22,Levotiroxina 50mcg,Hormônio tireoidiano,1,R$ 19.40,São Paulo,Ana Santos,CLI016
+2024-01-23,Cetirizina 10mg,Antialérgico,2,R$ 9.80,Rio de Janeiro,Roberto Lima,CLI017
+2024-01-23,Prednisona 20mg,Corticosteroide,1,R$ 14.90,Belo Horizonte,Mariana Costa,CLI018
+2024-01-24,Azitromicina 500mg,Antibiótico,3,R$ 32.50,Curitiba,Carlos Silva,CLI019
+2024-01-24,Dexametasona 4mg,Corticosteroide,1,R$ 11.80,Porto Alegre,Ana Santos,CLI0020
+2024-01-25,Paracetamol 500mg,Analgésico,2,R$ 8.50,São Paulo,Roberto Lima,CLI021
+2024-01-25,Hidroclorotiazida 25mg,Diurético,1,R$ 13.20,Rio de Janeiro,Mariana Costa,CLI022
+2024-01-26,Metronidazol 250mg,Antibiótico,3,R$ 15.60,Belo Horizonte,Carlos Silva,CLI023
+2024-01-26,Propranolol 40mg,Beta-bloqueador,1,R$ 12.90,Curitiba,Ana Santos,CLI024
+2024-01-27,Glibenclamida 5mg,Antidiabético,2,R$ 10.50,Porto Alegre,Roberto Lima,CLI025
+2024-01-27,Ibuprofeno 600mg,Anti-inflamatório,1,R$ 12.30,São Paulo,Mariana Costa,CLI026
+2024-01-28,Omeprazol 20mg,Antiácido,3,R$ 15.80,Rio de Janeiro,Carlos Silva,CLI027
+2024-01-28,Losartana 50mg,Anti-hipertensivo,1,R$ 18.90,Belo Horizonte,Ana Santos,CLI028
+2024-01-29,Metformina 850mg,Antidiabético,2,R$ 22.40,Curitiba,Roberto Lima,CLI029
+2024-01-29,Amoxicilina 500mg,Antibiótico,1,R$ 28.70,Porto Alegre,Mariana Costa,CLI030
+2024-01-30,Dipirona 500mg,Analgésico,4,R$ 6.90,São Paulo,Carlos Silva,CLI031
+2024-01-30,Enalapril 10mg,Anti-hipertensivo,1,R$ 14.50,Rio de Janeiro,Ana Santos,CLI032
+2024-01-31,Sinvastatina 20mg,Hipolipemiante,2,R$ 19.80,Belo Horizonte,Roberto Lima,CLI033
+2024-01-31,Captopril 25mg,Anti-hipertensivo,1,R$ 11.20,Curitiba,Mariana Costa,CLI034
+2024-02-01,Fluoxetina 20mg,Antidepressivo,3,R$ 16.50,Porto Alegre,Carlos Silva,CLI035
+2024-02-01,Clonazepam 2mg,Ansiolítico,1,R$ 24.30,São Paulo,Ana Santos,CLI036
+2024-02-02,Diclofenaco 50mg,Anti-inflamatório,2,R$ 13.70,Rio de Janeiro,Roberto Lima,CLI037
+2024-02-02,Ranitidina 150mg,Antiácido,1,R$ 17.90,Belo Horizonte,Mariana Costa,CLI038
+2024-02-03,Atorvastatina 10mg,Hipolipemiante,3,R$ 21.60,Curitiba,Carlos Silva,CLI039
+2024-02-03,Levotiroxina 50mcg,Hormônio tireoidiano,1,R$ 19.40,Porto Alegre,Ana Santos,CLI040
+2024-02-04,Cetirizina 10mg,Antialérgico,2,R$ 9.80,São Paulo,Roberto Lima,CLI041
+2024-02-04,Prednisona 20mg,Corticosteroide,1,R$ 14.90,Rio de Janeiro,Mariana Costa,CLI042
+2024-02-05,Azitromicina 500mg,Antibiótico,3,R$ 32.50,Belo Horizonte,Carlos Silva,CLI043
+2024-02-05,Dexametasona 4mg,Corticosteroide,1,R$ 11.80,Curitiba,Ana Santos,CLI044
+2024-02-06,Paracetamol 500mg,Analgésico,2,R$ 8.50,Porto Alegre,Roberto Lima,CLI045
+2024-02-06,Hidroclorotiazida 25mg,Diurético,1,R$ 13.20,São Paulo,Mariana Costa,CLI0046
+2024-02-07,Metronidazol 250mg,Antibiótico,3,R$ 15.60,Rio de Janeiro,Carlos Silva,CLI047
+2024-02-07,Propranolol 40mg,Beta-bloqueador,1,R$ 12.90,Belo Horizonte,Ana Santos,CLI048
+2024-02-08,Glibenclamida 5mg,Antidiabético,2,R$ 10.50,Curitiba,Roberto Lima,CLI049
+2024-02-08,Ibuprofeno 600mg,Anti-inflamatório,1,R$ 12.30,Porto Alegre,Mariana Costa,CLI050
+2024-02-09,Omeprazol 20mg,Antiácido,3,R$ 15.80,São Paulo,Carlos Silva,CLI051
+2024-02-09,Losartana 50mg,Anti-hipertensivo,1,R$ 18.90,Rio de Janeiro,Ana Santos,CLI052
+2024-02-10,Metformina 850mg,Antidiabético,2,R$ 22.40,Belo Horizonte,Roberto Lima,CLI053
+2024-02-10,Amoxicilina 500mg,Antibiótico,1,R$ 28.70,Curitiba,Mariana Costa,CLI054
+2024-02-11,Dipirona 500mg,Analgésico,4,R$ 6.90,Porto Alegre,Carlos Silva,CLI055
+2024-02-11,Enalapril 10mg,Anti-hipertensivo,1,R$ 14.50,São Paulo,Ana Santos,CLI056
+2024-02-12,Sinvastatina 20mg,Hipolipemiante,2,R$ 19.80,Rio de Janeiro,Roberto Lima,CLI057
+2024-02-12,Captopril 25mg,Anti-hipertensivo,1,R$ 11.20,Belo Horizonte,Mariana Costa,CLI058
+2024-02-13,Fluoxetina 20mg,Antidepressivo,3,R$ 16.50,Curitiba,Carlos Silva,CLI059
+2024-02-13,Clonazepam 2mg,Ansiolítico,1,R$ 24.30,Porto Alegre,Ana Santos,CLI060
+2024-02-14,Diclofenaco 50mg,Anti-inflamatório,2,R$ 13.70,São Paulo,Roberto Lima,CLI061
+2024-02-14,Ranitidina 150mg,Antiácido,1,R$ 17.90,Rio de Janeiro,Mariana Costa,CLI062
+2024-02-15,Atorvastatina 10mg,Hipolipemiante,3,R$ 21.60,Belo Horizonte,Carlos Silva,CLI063
+2024-02-15,Levotiroxina 50mcg,Hormônio tireoidiano,1,R$ 19.40,Curitiba,Ana Santos,CLI064
+2024-02-16,Cetirizina 10mg,Antialérgico,2,R$ 9.80,Porto Alegre,Roberto Lima,CLI065
+2024-02-16,Prednisona 20mg,Corticosteroide,1,R$ 14.90,São Paulo,Mariana Costa,CLI066
+2024-02-17,Azitromicina 500mg,Antibiótico,3,R$ 32.50,Rio de Janeiro,Carlos Silva,CLI067
+2024-02-17,Dexametasona 4mg,Corticosteroide,1,R$ 11.80,Belo Horizonte,Ana Santos,CLI068
+2024-02-18,Paracetamol 500mg,Analgésico,2,R$ 8.50,Curitiba,Roberto Lima,CLI069
+2024-02-18,Hidroclorotiazida 25mg,Diurético,1,R$ 13.20,Porto Alegre,Mariana Costa,CLI070
+2024-02-19,Metronidazol 250mg,Antibiótico,3,R$ 15.60,São Paulo,Carlos Silva,CLI071
+2024-02-19,Propranolol 40mg,Beta-bloqueador,1,R$ 12.90,Rio de Janeiro,Ana Santos,CLI072
+2024-02-20,Glibenclamida 5mg,Antidiabético,2,R$ 10.50,Belo Horizonte,Roberto Lima,CLI073
+2024-02-20,Ibuprofeno 600mg,Anti-inflamatório,1,R$ 12.30,Curitiba,Mariana Costa,CLI074
+2024-02-21,Omeprazol 20mg,Antiácido,3,R$ 15.80,Porto Alegre,Carlos Silva,CLI075
+2024-02-21,Losartana 50mg,Anti-hipertensivo,1,R$ 18.90,São Paulo,Ana Santos,CLI076
+2024-02-22,Metformina 850mg,Antidiabético,2,R$ 22.40,Rio de Janeiro,Roberto Lima,CLI077
+2024-02-22,Amoxicilina 500mg,Antibiótico,1,R$ 28.70,Belo Horizonte,Mariana Costa,CLI078
+2024-02-23,Dipirona 500mg,Analgésico,4,R$ 6.90,Curitiba,Carlos Silva,CLI079
+2024-02-23,Enalapril 10mg,Anti-hipertensivo,1,R$ 14.50,Porto Alegre,Ana Santos,CLI080
+2024-02-24,Sinvastatina 20mg,Hipolipemiante,2,R$ 19.80,São Paulo,Roberto Lima,CLI081
+2024-02-24,Captopril 25mg,Anti-hipertensivo,1,R$ 11.20,Rio de Janeiro,Mariana Costa,CLI082
+2024-02-25,Fluoxetina 20mg,Antidepressivo,3,R$ 16.50,Belo Horizonte,Carlos Silva,CLI083
+2024-02-25,Clonazepam 2mg,Ansiolítico,1,R$ 24.30,Curitiba,Ana Santos,CLI084
+2024-02-26,Diclofenaco 50mg,Anti-inflamatório,2,R$ 13.70,Porto Alegre,Roberto Lima,CLI205
+2024-02-26,Ranitidina 150mg,Antiácido,1,R$ 17.90,São Paulo,Mariana Costa,CLI206
+2024-02-27,Atorvastatina 10mg,Hipolipemiante,3,R$ 21.60,Rio de Janeiro,Carlos Silva,CLI207
+2024-02-27,Levotiroxina 50mcg,Hormônio tireoidiano,1,R$ 19.40,Belo Horizonte,Ana Santos,CLI208
+2024-02-28,Cetirizina 10mg,Antialérgico,2,R$ 9.80,Curitiba,Roberto Lima,CLI209
+2024-02-28,Prednisona 20mg,Corticosteroide,1,R$ 14.90,Porto Alegre,Mariana Costa,CLI210
+2024-02-29,Azitromicina 500mg,Antibiótico,3,R$ 32.50,São Paulo,Carlos Silva,CLI211
+2024-02-29,Dexametasona 4mg,Corticosteroide,1,R$ 11.80,Rio de Janeiro,Ana Santos,CLI212
+2024-03-01,Paracetamol 500mg,Analgésico,2,R$ 8.50,Belo Horizonte,Roberto Lima,CLI213
+2024-03-01,Hidroclorotiazida 25mg,Diurético,1,R$ 13.20,Curitiba,Mariana Costa,CLI214
+2024-03-02,Metronidazol 250mg,Antibiótico,3,R$ 15.60,Porto Alegre,Carlos Silva,CLI215
+2024-03-02,Propranolol 40mg,Beta-bloqueador,1,R$ 12.90,São Paulo,Ana Santos,CLI216
+2024-03-03,Glibenclamida 5mg,Antidiabético,2,R$ 10.50,Rio de Janeiro,Roberto Lima,CLI217
+2024-03-03,Ibuprofeno 600mg,Anti-inflamatório,1,R$ 12.30,Belo Horizonte,Mariana Costa,CLI218
+2024-03-04,Omeprazol 20mg,Antiácido,3,R$ 15.80,Curitiba,Carlos Silva,CLI219
+2024-03-04,Losartana 50mg,Anti-hipertensivo,1,R$ 18.90,Porto Alegre,Ana Santos,CLI220
+2024-03-05,Metformina 850mg,Antidiabético,2,R$ 22.40,São Paulo,Roberto Lima,CLI221
+2024-03-05,Amoxicilina 500mg,Antibiótico,1,R$ 28.70,Rio de Janeiro,Mariana Costa,CLI222
+2024-03-06,Dipirona 500mg,Analgésico,4,R$ 6.90,Belo Horizonte,Carlos Silva,CLI223
+2024-03-06,Enalapril 10mg,Anti-hipertensivo,1,R$ 14.50,Curitiba,Ana Santos,CLI224
+2024-03-07,Sinvastatina 20mg,Hipolipemiante,2,R$ 19.80,Porto Alegre,Roberto Lima,CLI225
+2024-03-07,Captopril 25mg,Anti-hipertensivo,1,R$ 11.20,São Paulo,Mariana Costa,CLI226
+2024-03-08,Fluoxetina 20mg,Antidepressivo,3,R$ 16.50,Rio de Janeiro,Carlos Silva,CLI227
+2024-03-08,Clonazepam 2mg,Ansiolítico,1,R$ 24.30,Belo Horizonte,Ana Santos,CLI228
+2024-03-09,Diclofenaco 50mg,Anti-inflamatório,2,R$ 13.70,Curitiba,Roberto Lima,CLI229
+2024-03-09,Ranitidina 150mg,Antiácido,1,R$ 17.90,Porto Alegre,Mariana Costa,CLI230
+2024-03-10,Atorvastatina 10mg,Hipolipemiante,3,R$ 21.60,São Paulo,Carlos Silva,CLI231
+2024-03-10,Levotiroxina 50mcg,Hormônio tireoidiano,1,R$ 19.40,Rio de Janeiro,Ana Santos,CLI232
+2024-03-11,Cetirizina 10mg,Antialérgico,2,R$ 9.80,Belo Horizonte,Roberto Lima,CLI233
+2024-03-11,Prednisona 20mg,Corticosteroide,1,R$ 14.90,Curitiba,Mariana Costa,CLI234
+2024-03-12,Azitromicina 500mg,Antibiótico,3,R$ 32.50,Porto Alegre,Carlos Silva,CLI235
+2024-03-12,Dexametasona 4mg,Corticosteroide,1,R$ 11.80,São Paulo,Ana Santos,CLI236
+2024-03-13,Paracetamol 500mg,Analgésico,2,R$ 8.50,Rio de Janeiro,Roberto Lima,CLI237
+2024-03-13,Hidroclorotiazida 25mg,Diurético,1,R$ 13.20,Belo Horizonte,Mariana Costa,CLI238
+2024-03-14,Metronidazol 250mg,Antibiótico,3,R$ 15.60,Curitiba,Carlos Silva,CLI239
+2024-03-14,Propranolol 40mg,Beta-bloqueador,1,R$ 12.90,Porto Alegre,Ana Santos,CLI240
+2024-03-15,Glibenclamida 5mg,Antidiabético,2,R$ 10.50,São Paulo,Roberto Lima,CLI241
+2024-03-15,Ibuprofeno 600mg,Anti-inflamatório,1,R$ 12.30,Rio de Janeiro,Mariana Costa,CLI242
+2024-03-16,Omeprazol 20mg,Antiácido,3,R$ 15.80,Belo Horizonte,Carlos Silva,CLI243
+2024-03-16,Losartana 50mg,Anti-hipertensivo,1,R$ 18.90,Curitiba,Ana Santos,CLI244
+2024-03-17,Metformina 850mg,Antidiabético,2,R$ 22.40,Porto Alegre,Roberto Lima,CLI245
+2024-03-17,Amoxicilina 500mg,Antibiótico,1,R$ 28.70,São Paulo,Mariana Costa,CLI246
+2024-03-18,Dipirona 500mg,Analgésico,4,R$ 6.90,Rio de Janeiro,Carlos Silva,CLI247
+2024-03-18,Enalapril 10mg,Anti-hipertensivo,1,R$ 14.50,Belo Horizonte,Ana Santos,CLI248
+2024-03-19,Sinvastatina 20mg,Hipolipemiante,2,R$ 19.80,Curitiba,Roberto Lima,CLI249
+2024-03-19,Captopril 25mg,Anti-hipertensivo,1,R$ 11.20,Porto Alegre,Mariana Costa,CLI250
+2024-03-20,Fluoxetina 20mg,Antidepressivo,3,R$ 16.50,São Paulo,Carlos Silva,CLI251
+2024-03-20,Clonazepam 2mg,Ansiolítico,1,R$ 24.30,Rio de Janeiro,Ana Santos,CLI252
+2024-03-21,Diclofenaco 50mg,Anti-inflamatório,2,R$ 13.70,Belo Horizonte,Roberto Lima,CLI253
+2024-03-21,Ranitidina 150mg,Antiácido,1,R$ 17.90,Curitiba,Mariana Costa,CLI254
+2024-03-22,Atorvastatina 10mg,Hipolipemiante,3,R$ 21.60,Porto Alegre,Carlos Silva,CLI255
+2024-03-22,Levotiroxina 50mcg,Hormônio tireoidiano,1,R$ 19.40,São Paulo,Ana Santos,CLI256
+2024-03-23,Cetirizina 10mg,Antialérgico,2,R$ 9.80,Rio de Janeiro,Roberto Lima,CLI257
+2024-03-23,Prednisona 20mg,Corticosteroide,1,R$ 14.90,Belo Horizonte,Mariana Costa,CLI258
+2024-03-24,Azitromicina 500mg,Antibiótico,3,R$ 32.50,Curitiba,Carlos Silva,CLI259
+2024-03-24,Dexametasona 4mg,Corticosteroide,1,R$ 11.80,Porto Alegre,Ana Santos,CLI260
+2024-03-25,Paracetamol 500mg,Analgésico,2,R$ 8.50,São Paulo,Roberto Lima,CLI261
+2024-03-25,Hidroclorotiazida 25mg,Diurético,1,R$ 13.20,Rio de Janeiro,Mariana Costa,CLI262
+2024-03-26,Metronidazol 250mg,Antibiótico,3,R$ 15.60,Belo Horizonte,Carlos Silva,CLI263
+2024-03-26,Propranolol 40mg,Beta-bloqueador,1,R$ 12.90,Curitiba,Ana Santos,CLI264
+2024-03-27,Glibenclamida 5mg,Antidiabético,2,R$ 10.50,Porto Alegre,Roberto Lima,CLI265
+2024-03-27,Ibuprofeno 600mg,Anti-inflamatório,1,R$ 12.30,São Paulo,Mariana Costa,CLI266
+2024-03-28,Omeprazol 20mg,Antiácido,3,R$ 15.80,Rio de Janeiro,Carlos Silva,CLI267
+2024-03-28,Losartana 50mg,Anti-hipertensivo,1,R$ 18.90,Belo Horizonte,Ana Santos,CLI268
+2024-03-29,Metformina 850mg,Antidiabético,2,R$ 22.40,Curitiba,Roberto Lima,CLI269
+2024-03-29,Amoxicilina 500mg,Antibiótico,1,R$ 28.70,Porto Alegre,Mariana Costa,CLI270
+2024-03-30,Dipirona 500mg,Analgésico,4,R$ 6.90,São Paulo,Carlos Silva,CLI271
+2024-03-30,Enalapril 10mg,Anti-hipertensivo,1,R$ 14.50,Rio de Janeiro,Ana Santos,CLI272
+2024-03-31,Sinvastatina 20mg,Hipolipemiante,2,R$ 19.80,Belo Horizonte,Roberto Lima,CLI273
+2024-03-31,Captopril 25mg,Anti-hipertensivo,1,R$ 11.20,Curitiba,Mariana Costa,CLI274
+2024-04-01,Fluoxetina 20mg,Antidepressivo,3,R$ 16.50,Porto Alegre,Carlos Silva,CLI275
+2024-04-01,Clonazepam 2mg,Ansiolítico,1,R$ 24.30,São Paulo,Ana Santos,CLI276
+2024-04-02,Diclofenaco 50mg,Anti-inflamatório,2,R$ 13.70,Rio de Janeiro,Roberto Lima,CLI277
+2024-04-02,Ranitidina 150mg,Antiácido,1,R$ 17.90,Belo Horizonte,Mariana Costa,CLI278
+2024-04-03,Atorvastatina 10mg,Hipolipemiante,3,R$ 21.60,Curitiba,Carlos Silva,CLI279
+2024-04-03,Levotiroxina 50mcg,Hormônio tireoidiano,1,R$ 19.40,Porto Alegre,Ana Santos,CLI280
