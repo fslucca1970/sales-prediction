@@ -89,7 +89,8 @@ function parseCSV(csv) {
             row['Data'] = date; // Armazena o objeto Date parseado
 
             // Usar 'Preço' do CSV para Preço Unitário
-            let precoUnitarioRaw = String(row['Preço'] || '0').replace('R$', '').replace(/\./g, '').replace(',', '.').trim();
+            // CORREÇÃO CIRÚRGICA AQUI: Removendo apenas 'R$' e espaços, sem mexer no ponto decimal.
+            let precoUnitarioRaw = String(row['Preço'] || '0').replace('R$', '').trim();
             const precoUnitario = parseFloat(precoUnitarioRaw);
             if (isNaN(precoUnitario)) {
                 console.warn(`Linha ${i + 1}: Preço Unitário inválido "${row['Preço']}". Usando 0.`);
@@ -178,8 +179,6 @@ function initializeFilters() {
         updateDependentFilters();
     });
     document.getElementById('filterPeriodo').addEventListener('change', applyFilters);
-    // O seletor 'projectionMetric' foi removido do HTML nesta versão revertida
-    // document.getElementById('projectionMetric').addEventListener('change', applyFilters); 
     document.getElementById('clearBtn').addEventListener('click', clearFilters);
 }
 
@@ -256,8 +255,6 @@ function clearFilters() {
     document.getElementById('filterMedicamento').value = 'all';
     document.getElementById('filterVendedor').value = 'all';
     document.getElementById('filterPeriodo').value = 'daily'; // Reseta o período para diário
-    // O seletor 'projectionMetric' foi removido do HTML nesta versão revertida
-    // document.getElementById('projectionMetric').value = 'revenue'; 
     updateDependentFilters(); // Reseta os filtros dependentes
     applyFilters();
 }
