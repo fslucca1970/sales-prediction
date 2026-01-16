@@ -405,7 +405,7 @@ function renderCharts(data, period) {
                         }
                     },
                     y: {
-                        beginAtZero: true,
+                        beginAtZero: true, // Manter beginAtZero para garantir que a barra comece do zero
                         title: {
                             display: true,
                             text: historicalMetricLabel
@@ -485,7 +485,7 @@ function renderCharts(data, period) {
                     label: historicalMetricLabel + ' (Projeção)',
                     // Cria um array com nulls para o histórico e depois a projeção
                     data: Array(historicalMetricData.length - 1).fill(null).concat([historicalMetricData[historicalMetricData.length - 1]], projectionDataPoints),
-                    borderColor: 'rgb(255, 99, 132)', // CORREÇÃO AQUI: Adicionado o parêntese e aspa
+                    borderColor: 'rgb(255, 99, 132)', 
                     backgroundColor: 'rgba(255, 99, 132, 0.2)',
                     borderDash: [5, 5],
                     fill: false,
@@ -514,7 +514,7 @@ function renderCharts(data, period) {
                         }
                     },
                     y: {
-                        beginAtZero: true,
+                        beginAtZero: true, // Manter beginAtZero para garantir que a linha comece do zero
                         title: {
                             display: true,
                             text: historicalMetricLabel
