@@ -178,7 +178,8 @@ function initializeFilters() {
         updateDependentFilters();
     });
     document.getElementById('filterPeriodo').addEventListener('change', applyFilters);
-    // REMOVIDO: document.getElementById('projectionMetric').addEventListener('change', applyFilters);
+    // O seletor 'projectionMetric' foi removido do HTML nesta versão revertida
+    // document.getElementById('projectionMetric').addEventListener('change', applyFilters); 
     document.getElementById('clearBtn').addEventListener('click', clearFilters);
 }
 
@@ -255,7 +256,8 @@ function clearFilters() {
     document.getElementById('filterMedicamento').value = 'all';
     document.getElementById('filterVendedor').value = 'all';
     document.getElementById('filterPeriodo').value = 'daily'; // Reseta o período para diário
-    // REMOVIDO: document.getElementById('projectionMetric').value = 'revenue'; // Reseta a métrica de projeção
+    // O seletor 'projectionMetric' foi removido do HTML nesta versão revertida
+    // document.getElementById('projectionMetric').value = 'revenue'; 
     updateDependentFilters(); // Reseta os filtros dependentes
     applyFilters();
 }
@@ -323,7 +325,7 @@ function aggregateData(data, period) {
 }
 
 function renderCharts(data, period) {
-    const aggregatedDataPoints = aggregateData(data, period); // Agora retorna { x, revenue, units }
+    const aggregatedDataPoints = aggregateData(data, period);
 
     // Se não houver dados agregados, limpa os gráficos e exibe mensagem
     if (aggregatedDataPoints.length === 0) {
@@ -353,99 +355,91 @@ function renderCharts(data, period) {
         return;
     }
 
-    // Usaremos sempre a receita para esta versão revertida
     const historicalRevenueDataPoints = aggregatedDataPoints.map(item => ({ x: item.x, y: item.revenue }));
-    const historicalMetricLabel = 'Receita (R$)'; // Métrica padrão para a versão revertida
+    const historicalMetricLabel = 'Receita (R$)';
     const historicalMetricFormat = formatCurrency;
-    const labelsForChart = aggregatedDataPoints.map(item => item.x); // Usado para labels do eixo X
-
-    // Destruir gráficos existentes se houver
-    if (historicalChart) historicalChart.destroy();
-    if (projectionChart) projectionChart.destroy();
+    const labelsForChart = aggregatedDataPoints.map(item => item.x);
 
     // --- Gráfico Histórico de Vendas ---
     const historicalCanvas = document.getElementById('historicalChart');
-    if (historicalCanvas) { // Verifica se o canvas existe
+    if (historicalCanvas) {
         const ctxHistorical = historicalCanvas.getContext('2d');
-        historicalChart = new Chart(ctxHistorical, {
-            type: 'bar',
-            data: {
-                labels: labelsForChart, // Passa as strings de data para o eixo X
-                datasets: [{
-                    label: historicalMetricLabel,
-                    data: historicalRevenueDataPoints, // Dados de receita
-                    backgroundColor: 'rgba(0, 72, 72, 0.6)',
-                    borderColor: 'rgb(0, 72, 72)',
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: {
-                        type: 'time',
-                        time: {
-                            parser: 'yyyy-MM-dd', // Explicitamente define o parser para o formato ISO
-                            unit: period === 'daily' ? 'day' : (period === 'weekly' ? 'week' : 'month'),
-                            tooltipFormat: period === 'daily' ? 'dd/MM/yyyy' : (period === 'weekly' ? 'dd/MM/yyyy' : 'MM/yyyy'),
-                            displayFormats: {
-                                day: 'dd/MM',
-                                week: 'dd/MM',
-                                month: 'MM/yyyy'
-                            }
+        if (historicalChart) {
+            // Atualiza os dados do gráfico existente
+            historicalChart.data.labels = labelsForChart;
+            historicalChart.data.datasets[0].data = historicalRevenueDataPoints;
+            historicalChart.options.scales.x.time.unit = period === 'daily' ? 'day' : (period === 'weekly' ? 'week' : 'month');
+            historicalChart.options.scales.x.time.tooltipFormat = period === 'daily' ? 'dd/MM/yyyy' : (period === 'weekly' ? 'dd/MM/yyyy' : 'MM/yyyy');
+            historicalChart.options.scales.x.time.displayFormats.day = 'dd/MM';
+            historicalChart.options.scales.x.time.displayFormats.week = 'dd/MM';
+            historicalChart.options.scales.x.time.displayFormats.month = 'MM/yyyy';
+            historicalChart.update();
+        } else {
+            // Cria o gráfico pela primeira vez
+            historicalChart = new Chart(ctxHistorical, {
+                type: 'bar',
+                data: {
+                    labels: labelsForChart,
+                    datasets: [{
+                        label: historicalMetricLabel,
+                        data: historicalRevenueDataPoints,
+                        backgroundColor: 'rgba(0, 72, 72, 0.6)',
+                        borderColor: 'rgb(0, 72, 72)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false, // Manter false com altura definida no CSS
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: {
+                                parser: 'yyyy-MM-dd',
+                                unit: period === 'daily' ? 'day' : (period === 'weekly' ? 'week' : 'month'),
+                                tooltipFormat: period === 'daily' ? 'dd/MM/yyyy' : (period === 'weekly' ? 'dd/MM/yyyy' : 'MM/yyyy'),
+                                displayFormats: {
+                                    day: 'dd/MM',
+                                    week: 'dd/MM',
+                                    month: 'MM/yyyy'
+                                }
+                            },
+                            title: { display: true, text: 'Período' }
                         },
-                        title: {
-                            display: true,
-                            text: 'Período'
+                        y: {
+                            beginAtZero: true,
+                            title: { display: true, text: historicalMetricLabel },
+                            ticks: { callback: function(value) { return historicalMetricFormat(value); } }
                         }
                     },
-                    y: {
-                        beginAtZero: true, // Manter beginAtZero para garantir que a barra comece do zero
-                        title: {
-                            display: true,
-                            text: historicalMetricLabel
-                        },
-                        ticks: {
-                            callback: function(value) {
-                                return historicalMetricFormat(value);
-                            }
-                        }
-                    }
-                },
-                plugins: {
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                let label = context.dataset.label || '';
-                                if (label) {
-                                    label += ': ';
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) { label += ': '; }
+                                    if (context.parsed.y !== null) { label += historicalMetricFormat(context.parsed.y); }
+                                    return label;
                                 }
-                                if (context.parsed.y !== null) {
-                                    label += historicalMetricFormat(context.parsed.y);
-                                }
-                                return label;
                             }
                         }
                     }
                 }
-            }
-        });
+            });
+        }
     } else {
         console.warn("Elemento 'historicalChart' não encontrado. Gráfico histórico não será renderizado.");
     }
 
-
     // --- Gráfico de Projeção de Vendas ---
     const projectionDataPoints = [];
-    const numFuturePeriods = 3; // Projetar para 3 períodos futuros
+    const numFuturePeriods = 3;
 
     if (historicalRevenueDataPoints.length > 0) {
         const lastDataPoint = historicalRevenueDataPoints[historicalRevenueDataPoints.length - 1];
         const lastDate = new Date(lastDataPoint.x);
         const lastValue = lastDataPoint.y;
 
-        // Projeção linear simples: assume que o próximo valor é igual ao último
         for (let i = 1; i <= numFuturePeriods; i++) {
             let nextDate = new Date(lastDate);
             let nextDateKey;
@@ -459,87 +453,89 @@ function renderCharts(data, period) {
                 nextDate.setMonth(lastDate.getMonth() + i);
                 nextDateKey = `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, '0')}-01`;
             }
-            projectionDataPoints.push({ x: nextDateKey, y: lastValue }); // Adiciona como objeto {x,y}
+            projectionDataPoints.push({ x: nextDateKey, y: lastValue });
         }
     }
 
     const projectionCanvas = document.getElementById('projectionChart');
-    if (projectionCanvas) { // Verifica se o canvas existe
+    if (projectionCanvas) {
         const ctxProjection = projectionCanvas.getContext('2d');
-        projectionChart = new Chart(ctxProjection, {
-            type: 'line',
-            data: {
-                labels: labelsForChart.concat(projectionDataPoints.map(item => item.x)), // Combina labels históricos e de projeção
-                datasets: [{
-                    label: historicalMetricLabel + ' (Histórico)',
-                    data: historicalRevenueDataPoints, // Dados de receita
-                    borderColor: 'rgb(0, 72, 72)',
-                    backgroundColor: 'rgba(0, 72, 72, 0.2)',
-                    fill: false,
-                    tension: 0.1
-                }, {
-                    label: historicalMetricLabel + ' (Projeção)',
-                    // Cria um array com nulls para o histórico e depois a projeção
-                    data: Array(historicalRevenueDataPoints.length - 1).fill(null).concat([historicalRevenueDataPoints[historicalRevenueDataPoints.length - 1]], projectionDataPoints),
-                    borderColor: 'rgb(255, 99, 132)', 
-                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
-                    borderDash: [5, 5],
-                    fill: false,
-                    tension: 0.1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: {
-                        type: 'time',
-                        time: {
-                            parser: 'yyyy-MM-dd', // Explicitamente define o parser para o formato ISO
-                            unit: period === 'daily' ? 'day' : (period === 'weekly' ? 'week' : 'month'),
-                            tooltipFormat: period === 'daily' ? 'dd/MM/yyyy' : (period === 'weekly' ? 'dd/MM/yyyy' : 'MM/yyyy'),
-                            displayFormats: {
-                                day: 'dd/MM',
-                                week: 'dd/MM',
-                                month: 'MM/yyyy'
-                            }
+        const combinedLabels = labelsForChart.concat(projectionDataPoints.map(item => item.x));
+        const combinedData = Array(historicalRevenueDataPoints.length - 1).fill(null).concat([historicalRevenueDataPoints[historicalRevenueDataPoints.length - 1]], projectionDataPoints);
+
+        if (projectionChart) {
+            // Atualiza os dados do gráfico existente
+            projectionChart.data.labels = combinedLabels;
+            projectionChart.data.datasets[0].data = historicalRevenueDataPoints;
+            projectionChart.data.datasets[1].data = combinedData;
+            projectionChart.options.scales.x.time.unit = period === 'daily' ? 'day' : (period === 'weekly' ? 'week' : 'month');
+            projectionChart.options.scales.x.time.tooltipFormat = period === 'daily' ? 'dd/MM/yyyy' : (period === 'weekly' ? 'dd/MM/yyyy' : 'MM/yyyy');
+            projectionChart.options.scales.x.time.displayFormats.day = 'dd/MM';
+            projectionChart.options.scales.x.time.displayFormats.week = 'dd/MM';
+            projectionChart.options.scales.x.time.displayFormats.month = 'MM/yyyy';
+            projectionChart.update();
+        } else {
+            // Cria o gráfico pela primeira vez
+            projectionChart = new Chart(ctxProjection, {
+                type: 'line',
+                data: {
+                    labels: combinedLabels,
+                    datasets: [{
+                        label: historicalMetricLabel + ' (Histórico)',
+                        data: historicalRevenueDataPoints,
+                        borderColor: 'rgb(0, 72, 72)',
+                        backgroundColor: 'rgba(0, 72, 72, 0.2)',
+                        fill: false,
+                        tension: 0.1
+                    }, {
+                        label: historicalMetricLabel + ' (Projeção)',
+                        data: combinedData,
+                        borderColor: 'rgb(255, 99, 132)',
+                        backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                        borderDash: [5, 5],
+                        fill: false,
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false, // Manter false com altura definida no CSS
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: {
+                                parser: 'yyyy-MM-dd',
+                                unit: period === 'daily' ? 'day' : (period === 'weekly' ? 'week' : 'month'),
+                                tooltipFormat: period === 'daily' ? 'dd/MM/yyyy' : (period === 'weekly' ? 'dd/MM/yyyy' : 'MM/yyyy'),
+                                displayFormats: {
+                                    day: 'dd/MM',
+                                    week: 'dd/MM',
+                                    month: 'MM/yyyy'
+                                }
+                            },
+                            title: { display: true, text: 'Período' }
                         },
-                        title: {
-                            display: true,
-                            text: 'Período'
+                        y: {
+                            beginAtZero: true,
+                            title: { display: true, text: historicalMetricLabel },
+                            ticks: { callback: function(value) { return historicalMetricFormat(value); } }
                         }
                     },
-                    y: {
-                        beginAtZero: true, // Manter beginAtZero para garantir que a linha comece do zero
-                        title: {
-                            display: true,
-                            text: historicalMetricLabel
-                        },
-                        ticks: {
-                            callback: function(value) {
-                                return historicalMetricFormat(value);
-                            }
-                        }
-                    }
-                },
-                plugins: {
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                let label = context.dataset.label || '';
-                                if (label) {
-                                    label += ': ';
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) { label += ': '; }
+                                    if (context.parsed.y !== null) { label += historicalMetricFormat(context.parsed.y); }
+                                    return label;
                                 }
-                                if (context.parsed.y !== null) {
-                                    label += historicalMetricFormat(context.parsed.y);
-                                }
-                                return label;
                             }
                         }
                     }
                 }
-            }
-        });
+            });
+        }
     } else {
         console.warn("Elemento 'projectionChart' não encontrado. Gráfico de projeção não será renderizado.");
     }
@@ -553,7 +549,6 @@ function updateTable(data) {
     }
     tableBody.innerHTML = ''; // Limpa a tabela existente
 
-    // Limita a exibição a um número razoável de linhas para evitar sobrecarga
     const displayLimit = 500;
     const dataToDisplay = data.slice(0, displayLimit);
 
@@ -595,10 +590,9 @@ function updateLastUpdateDate() {
 document.addEventListener('DOMContentLoaded', () => {
     loadCSV();
 
-    // Adiciona event listeners para os filtros
     document.getElementById('filterCidade').addEventListener('change', () => {
         applyFilters();
-        updateDependentFilters(); // Atualiza os filtros dependentes
+        updateDependentFilters();
     });
     document.getElementById('filterCategoria').addEventListener('change', () => {
         applyFilters();
@@ -613,6 +607,5 @@ document.addEventListener('DOMContentLoaded', () => {
         updateDependentFilters();
     });
     document.getElementById('filterPeriodo').addEventListener('change', applyFilters);
-    // REMOVIDO: document.getElementById('projectionMetric').addEventListener('change', applyFilters);
     document.getElementById('clearBtn').addEventListener('click', clearFilters);
 });
