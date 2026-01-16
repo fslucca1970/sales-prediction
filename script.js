@@ -1,236 +1,407 @@
-     let salesData = [];
-    let salesHistoryChart;
-    let salesProjectionChart;
+// As importações do Chart.js e do adaptador de data-fns são feitas no index.html
 
-    // Elementos do DOM
-    const filterCidade = document.getElementById('filterCidade');
-    const filterCategoria = document.getElementById('filterCategoria');
-    const filterMedicamento = document.getElementById('filterMedicamento');
-    const filterVendedor = document.getElementById('filterVendedor');
-    const filterPeriodo = document.getElementById('filterPeriodo');
-    const projectionMetric = document.getElementById('projectionMetric'); // NOVO: Seletor de métrica da projeção
+let allData = [];
+let historicalChart = null;
+let projectionChart = null;
 
-    // Funções de formatação
-    const formatCurrency = (value) => {
-        return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
-    };
+const formatCurrency = (value) => {
+    return new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: 'BRL'
+    }).format(value);
+};
 
-    const formatDate = (dateString) => {
-        const date = new Date(dateString);
-        return date.toLocaleDateString('pt-BR', { year: 'numeric', month: '2-digit', day: '2-digit' });
-    };
+const formatNumber = (value) => {
+    return new Intl.NumberFormat('pt-BR').format(value);
+};
 
-    // Função para parsear o CSV
-    async function parseCSV() {
+// Função auxiliar para parsear data. Espera YYYY-MM-DD ou DD/MM/YYYY.
+function parseDateString(dateString) {
+    // Tenta o formato YYYY-MM-DD primeiro (ISO 8601)
+    let date = new Date(dateString);
+    // Se for inválida, tenta o formato DD/MM/YYYY
+    if (isNaN(date.getTime())) {
+        const parts = dateString.split('/');
+        if (parts.length === 3) {
+            const day = parseInt(parts[0], 10);
+            const month = parseInt(parts[1], 10) - 1; // Mês é 0-indexado
+            const year = parseInt(parts[2], 10);
+            date = new Date(year, month, day);
+            // Validação extra para datas como 31/02
+            if (date.getFullYear() !== year || date.getMonth() !== month || date.getDate() !== day) {
+                return new Date('Invalid Date');
+            }
+        } else {
+            return new Date('Invalid Date'); // Nem YYYY-MM-DD nem DD/MM/YYYY
+        }
+    }
+    return date;
+}
+
+async function loadCSV() {
+    try {
         const response = await fetch('vendas_farmacia.csv');
-        const text = await response.text();
-        const lines = text.split('\n').filter(line => line.trim() !== '');
-        const headers = lines[0].split(',').map(header => header.trim());
-        const parsedData = [];
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        const csv = await response.text();
+        parseCSV(csv);
+    } catch (error) {
+        console.error('Erro ao carregar CSV:', error);
+        alert('Erro ao carregar dados. Verifique o console para mais detalhes.');
+    }
+}
+
+function parseCSV(csv) {
+    try {
+        const lines = csv.trim().split('\n');
+        if (lines.length < 2) {
+            alert('CSV vazio ou inválido.');
+            return;
+        }
+
+        let separator = ',';
+        if (lines[0].includes(';')) {
+            separator = ';';
+        } else if (lines[0].includes('\t')) {
+            separator = '\t';
+        }
+
+        const headers = lines[0].split(separator).map(h => h.trim());
+        const data = [];
 
         for (let i = 1; i < lines.length; i++) {
-            const values = lines[i].split(',');
-            let row = {};
+            const currentLine = lines[i].trim();
+            if (!currentLine) continue; // Pula linhas vazias
+
+            const values = currentLine.split(separator);
+            const row = {};
             let isValidRow = true;
 
-            if (values.length !== headers.length) {
-                console.warn(`Linha ${i + 1}: Ignorando linha malformada. Esperado ${headers.length} colunas, encontrado ${values.length}.`);
-                isValidRow = false;
-            } else {
-                for (let j = 0; j < headers.length; j++) {
-                    row[headers[j]] = values[j].trim();
-                }
-
-                // Validação e conversão de tipos
-                row['Data'] = new Date(row['Data']);
-                if (isNaN(row['Data'].getTime())) {
-                    console.warn(`Linha ${i + 1}: Data inválida "${row['Data']}". Ignorando linha.`);
-                    isValidRow = false;
-                }
-
-                const quantidade = parseInt(row['Quantidade']);
-                if (isNaN(quantidade)) {
-                    console.warn(`Linha ${i + 1}: Quantidade inválida "${row['Quantidade']}". Usando 0.`);
-                    isValidRow = false;
-                }
-                row['Quantidade'] = quantidade;
-
-                // Usar 'Preço' do CSV para Preço Unitário
-                let precoUnitarioRaw = String(row['Preço'] || '0').replace('R$', '').trim();
-                // Correção cirúrgica: Não remover o ponto se ele for o separador decimal.
-                // Se o CSV usa PONTO como separador decimal (ex: 8.50), a linha que removia o ponto (replace(/\./g, '')) deve ser removida.
-                // Se o CSV usasse VÍRGULA como separador decimal (ex: 8,50), faríamos: precoUnitarioRaw = precoUnitarioRaw.replace(',', '.');
-                const precoUnitario = parseFloat(precoUnitarioRaw);
-                if (isNaN(precoUnitario)) {
-                    console.warn(`Linha ${i + 1}: Preço Unitário inválido "${row['Preço']}". Usando 0.`);
-                    isValidRow = false;
-                }
-                row['Preço Unitário'] = precoUnitario;
-
-                row['Preço Total'] = row['Quantidade'] * row['Preço Unitário'];
+            for (let j = 0; j < headers.length; j++) {
+                row[headers[j]] = values[j] ? values[j].trim() : '';
             }
+
+            // Validar e parsear dados
+            const date = parseDateString(row['Data']);
+            if (isNaN(date.getTime())) {
+                console.warn(`Linha ${i + 1}: Data inválida "${row['Data']}". Linha ignorada.`);
+                isValidRow = false;
+            }
+            row['Data'] = date; // Armazena o objeto Date parseado
+
+            // Usar 'Preço' do CSV para Preço Unitário
+            // CORREÇÃO CIRÚRGICA AQUI: Removendo apenas 'R$' e espaços, sem mexer no ponto decimal.
+            // E corrigindo o erro de digitação da variável.
+            let precoUnitarioRaw = String(row['Preço'] || '0').replace('R$', '').trim();
+            const precoUnitario = parseFloat(precoUnitarioRaw);
+            if (isNaN(precoUnitario)) {
+                console.warn(`Linha ${i + 1}: Preço Unitário inválido "${row['Preço']}". Usando 0.`);
+                isValidRow = false;
+            }
+            row['Preço Unitário'] = precoUnitario; // Armazenar como 'Preço Unitário' para consistência interna
+
+            let quantidadeRaw = String(row['Quantidade'] || '0').replace('.', '').replace(',', '.').trim();
+            const quantidade = parseInt(quantidadeRaw, 10);
+            if (isNaN(quantidade)) {
+                console.warn(`Linha ${i + 1}: Quantidade inválida "${row['Quantidade']}". Usando 1.`);
+                isValidRow = false;
+            }
+            row['Quantidade'] = quantidade;
+
+            // Calcular Preço Total, já que não há coluna 'Preço Total' no CSV
+            row['Preço Total'] = precoUnitario * quantidade;
 
             if (isValidRow) {
-                parsedData.push(row);
-            }
-        }
-        console.log(`CSV carregado com sucesso: ${parsedData.length} registros válidos.`);
-        return parsedData;
-    }
-
-    // Função para inicializar os filtros
-    function initializeFilters() {
-        const cidades = [...new Set(salesData.map(item => item['Cidade']))].sort();
-        cidades.forEach(cidade => {
-            const option = document.createElement('option');
-            option.value = cidade;
-            option.textContent = cidade;
-            filterCidade.appendChild(option);
-        });
-
-        const categorias = [...new Set(salesData.map(item => item['Categoria']))].sort();
-        categorias.forEach(categoria => {
-            const option = document.createElement('option');
-            option.value = categoria;
-            option.textContent = categoria;
-            filterCategoria.appendChild(option);
-        });
-
-        const medicamentos = [...new Set(salesData.map(item => item['Medicamento']))].sort();
-        medicamentos.forEach(medicamento => {
-            const option = document.createElement('option');
-            option.value = medicamento;
-            option.textContent = medicamento;
-            filterMedicamento.appendChild(option);
-        });
-
-        const vendedores = [...new Set(salesData.map(item => item['Vendedor']))].sort();
-        vendedores.forEach(vendedor => {
-            const option = document.createElement('option');
-            option.value = vendedor;
-            option.textContent = vendedor;
-            filterVendedor.appendChild(option);
-        });
-
-        // Adicionar event listeners para os filtros
-        filterCidade.addEventListener('change', applyFilters);
-        filterCategoria.addEventListener('change', applyFilters);
-        filterMedicamento.addEventListener('change', applyFilters);
-        filterVendedor.addEventListener('change', applyFilters);
-        filterPeriodo.addEventListener('change', applyFilters);
-        projectionMetric.addEventListener('change', applyFilters); // NOVO: Event listener para a métrica da projeção
-    }
-
-    // Função para aplicar os filtros e atualizar o dashboard
-    function applyFilters() {
-        let filteredData = [...salesData];
-
-        const selectedCidade = filterCidade.value;
-        if (selectedCidade !== 'all') {
-            filteredData = filteredData.filter(item => item['Cidade'] === selectedCidade);
-        }
-
-        const selectedCategoria = filterCategoria.value;
-        if (selectedCategoria !== 'all') {
-            filteredData = filteredData.filter(item => item['Categoria'] === selectedCategoria);
-        }
-
-        const selectedMedicamento = filterMedicamento.value;
-        if (selectedMedicamento !== 'all') {
-            filteredData = filteredData.filter(item => item['Medicamento'] === selectedMedicamento);
-        }
-
-        const selectedVendedor = filterVendedor.value;
-        if (selectedVendedor !== 'all') {
-            filteredData = filteredData.filter(item => item['Vendedor'] === selectedVendedor);
-        }
-
-        updateStats(filteredData);
-        updateTable(filteredData);
-        renderCharts(filteredData);
-    }
-
-    // Função para atualizar as estatísticas
-    function updateStats(data) {
-        const totalVendas = data.length;
-        const receitaTotal = data.reduce((sum, item) => sum + item['Preço Total'], 0);
-        const totalUnidades = data.reduce((sum, item) => sum + item['Quantidade'], 0);
-        const ticketMedio = totalVendas > 0 ? receitaTotal / totalVendas : 0;
-
-        const produtoCounts = {};
-        data.forEach(item => {
-            produtoCounts[item['Medicamento']] = (produtoCounts[item['Medicamento']] || 0) + item['Quantidade'];
-        });
-
-        let produtoTop = 'N/A';
-        let maxCount = 0;
-        for (const produto in produtoCounts) {
-            if (produtoCounts[produto] > maxCount) {
-                maxCount = produtoCounts[produto];
-                produtoTop = produto;
+                data.push(row);
             }
         }
 
-        document.getElementById('totalVendas').textContent = totalVendas;
-        document.getElementById('receitaTotal').textContent = formatCurrency(receitaTotal);
-        document.getElementById('ticketMedio').textContent = formatCurrency(ticketMedio);
-        document.getElementById('produtoTop').textContent = produtoTop;
-        document.getElementById('totalUnidades').textContent = totalUnidades;
+        allData = data;
+        console.log(`CSV carregado com sucesso: ${allData.length} registros válidos.`);
+        updateLastUpdateDate(); // Atualiza a data da última atualização
 
-        document.getElementById('lastUpdateDate').textContent = new Date().toLocaleDateString('pt-BR');
+        initializeFilters();
+        applyFilters(); // Aplica os filtros iniciais e renderiza tudo
+    } catch (error) {
+        console.error('Erro ao processar dados do CSV:', error);
+        alert('Erro ao processar dados do CSV. Verifique o console para mais detalhes.');
+    }
+}
+
+function getUniqueValues(data, key) {
+    const values = [...new Set(data.map(item => item[key]))].filter(Boolean); // Remove valores vazios/nulos
+    return values.sort();
+}
+
+function populateSelect(elementId, items, defaultOptionText) {
+    const select = document.getElementById(elementId);
+    if (!select) {
+        console.error(`Elemento com ID '${elementId}' não encontrado.`);
+        return;
+    }
+    const currentSelection = select.value;
+    select.innerHTML = `<option value="all">${defaultOptionText}</option>`; // Limpa e adiciona opção padrão
+
+    items.forEach(item => {
+        const option = document.createElement('option');
+        option.value = item;
+        option.textContent = item;
+        select.appendChild(option);
+    });
+    // Tenta restaurar a seleção anterior, se ainda for uma opção válida
+    if (items.includes(currentSelection) || currentSelection === 'all') {
+        select.value = currentSelection;
+    } else {
+        select.value = 'all';
+    }
+    select.disabled = false; // Garante que o filtro esteja habilitado
+}
+
+// Função debounce para otimizar chamadas de applyFilters
+function debounce(func, delay) {
+    let timeout;
+    return function(...args) {
+        const context = this;
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(context, args), delay);
+    };
+}
+
+// Criar uma versão "debounced" de applyFilters
+const debouncedApplyFilters = debounce(applyFilters, 300); // 300ms de atraso
+
+function initializeFilters() {
+    populateSelect('filterCidade', getUniqueValues(allData, 'Cidade'), 'Todas as Cidades');
+    populateSelect('filterCategoria', getUniqueValues(allData, 'Categoria'), 'Todas as Categorias');
+    populateSelect('filterMedicamento', getUniqueValues(allData, 'Medicamento'), 'Todos os Medicamentos');
+    populateSelect('filterVendedor', getUniqueValues(allData, 'Vendedor'), 'Todos os Vendedores');
+
+    // Adiciona event listeners para os filtros, usando a versão debounced para applyFilters
+    document.getElementById('filterCidade').addEventListener('change', () => {
+        debouncedApplyFilters();
+        updateDependentFilters(); // updateDependentFilters pode ser chamado imediatamente
+    });
+    document.getElementById('filterCategoria').addEventListener('change', () => {
+        debouncedApplyFilters();
+        updateDependentFilters();
+    });
+    document.getElementById('filterMedicamento').addEventListener('change', () => {
+        debouncedApplyFilters();
+        updateDependentFilters();
+    });
+    document.getElementById('filterVendedor').addEventListener('change', () => {
+        debouncedApplyFilters();
+        updateDependentFilters();
+    });
+    document.getElementById('filterPeriodo').addEventListener('change', debouncedApplyFilters);
+    document.getElementById('projectionMetric').addEventListener('change', debouncedApplyFilters); // Adicionado novamente o listener para a métrica da projeção
+    document.getElementById('clearBtn').addEventListener('click', clearFilters);
+}
+
+function updateDependentFilters() {
+    const selectedCidade = document.getElementById('filterCidade').value;
+    const selectedCategoria = document.getElementById('filterCategoria').value;
+    const selectedMedicamento = document.getElementById('filterMedicamento').value;
+    const selectedVendedor = document.getElementById('filterVendedor').value;
+
+    let filtered = allData;
+
+    if (selectedCidade !== 'all') {
+        filtered = filtered.filter(item => item['Cidade'] === selectedCidade);
     }
 
-    // Função para atualizar a tabela
-    function updateTable(data) {
-        const salesTableBody = document.getElementById('salesTableBody');
-        salesTableBody.innerHTML = ''; // Limpa a tabela
+    // Popula os filtros dependentes com base nos dados filtrados
+    const categorias = [...new Set(filtered.map(item => item['Categoria']))].filter(Boolean).sort();
+    const medicamentos = [...new Set(filtered.map(item => item['Medicamento']))].filter(Boolean).sort();
+    const vendedores = [...new Set(filtered.map(item => item['Vendedor']))].filter(Boolean).sort();
 
-        data.forEach(item => {
-            const row = salesTableBody.insertRow();
-            row.insertCell().textContent = formatDate(item['Data']);
-            row.insertCell().textContent = item['Medicamento'];
-            row.insertCell().textContent = item['Categoria'];
-            row.insertCell().textContent = item['Quantidade'];
-            row.insertCell().textContent = formatCurrency(item['Preço Unitário']);
-            row.insertCell().textContent = formatCurrency(item['Preço Total']);
-            row.insertCell().textContent = item['Cidade'];
-            row.insertCell().textContent = item['Vendedor'];
-        });
+    populateSelect('filterCategoria', categorias, 'Todas as Categorias');
+    populateSelect('filterMedicamento', medicamentos, 'Todos os Medicamentos');
+    populateSelect('filterVendedor', vendedores, 'Todos os Vendedores');
+
+    // Restaura a seleção se o valor ainda existir
+    if (categorias.includes(selectedCategoria)) {
+        document.getElementById('filterCategoria').value = selectedCategoria;
+    } else {
+        document.getElementById('filterCategoria').value = 'all';
+    }
+    if (medicamentos.includes(selectedMedicamento)) {
+        document.getElementById('filterMedicamento').value = selectedMedicamento;
+    } else {
+        document.getElementById('filterMedicamento').value = 'all';
+    }
+    if (vendedores.includes(selectedVendedor)) {
+        document.getElementById('filterVendedor').value = selectedVendedor;
+    } else {
+        document.getElementById('filterVendedor').value = 'all';
+    }
+}
+
+
+function applyFilters() {
+    let filteredData = allData;
+
+    const selectedCidade = document.getElementById('filterCidade').value;
+    const selectedCategoria = document.getElementById('filterCategoria').value;
+    const selectedMedicamento = document.getElementById('filterMedicamento').value;
+    const selectedVendedor = document.getElementById('filterVendedor').value;
+    const selectedPeriodo = document.getElementById('filterPeriodo').value; // Obtém o período selecionado
+
+    if (selectedCidade !== 'all') {
+        filteredData = filteredData.filter(item => item['Cidade'] === selectedCidade);
+    }
+    if (selectedCategoria !== 'all') {
+        filteredData = filteredData.filter(item => item['Categoria'] === selectedCategoria);
+    }
+    if (selectedMedicamento !== 'all') {
+        filteredData = filteredData.filter(item => item['Medicamento'] === selectedMedicamento);
+    }
+    if (selectedVendedor !== 'all') {
+        filteredData = filteredData.filter(item => item['Vendedor'] === selectedVendedor);
     }
 
-    // Função para renderizar os gráficos
-    function renderCharts(data) {
-        const selectedPeriod = filterPeriodo.value;
-        const selectedProjectionMetric = projectionMetric.value; // NOVO: Obter a métrica selecionada
+    updateStats(filteredData);
+    renderCharts(filteredData, selectedPeriodo); // Passa o período para renderCharts
+    updateTable(filteredData);
+}
 
-        // Agrupar dados para o histórico
-        const groupedHistoryData = groupDataByPeriod(data, selectedPeriod);
+function clearFilters() {
+    document.getElementById('filterCidade').value = 'all';
+    document.getElementById('filterCategoria').value = 'all';
+    document.getElementById('filterMedicamento').value = 'all';
+    document.getElementById('filterVendedor').value = 'all';
+    document.getElementById('filterPeriodo').value = 'daily'; // Reseta o período para diário
+    document.getElementById('projectionMetric').value = 'revenue'; // Reseta a métrica de projeção
+    updateDependentFilters(); // Reseta os filtros dependentes
+    applyFilters();
+}
 
-        // Preparar dados para o histórico (sempre receita)
-        const historyLabels = groupedHistoryData.map(item => item.period);
-        const historyRevenueData = groupedHistoryData.map(item => item.revenue);
+function updateStats(data) {
+    const totalVendas = data.length;
+    const receitaTotal = data.reduce((sum, item) => sum + item['Preço Total'], 0);
+    const totalUnidades = data.reduce((sum, item) => sum + item.Quantidade, 0);
+    const ticketMedio = totalVendas > 0 ? receitaTotal / totalVendas : 0;
 
-        // Preparar dados para a projeção (receita ou unidades)
-        const projectionData = groupDataByPeriod(salesData, selectedPeriod); // Usar salesData completo para projeção
-        const projectionLabels = projectionData.map(item => item.period);
-        const projectionValues = projectionData.map(item => selectedProjectionMetric === 'revenue' ? item.revenue : item.units); // NOVO: Alternar entre receita e unidades
+    const productCounts = {};
+    data.forEach(item => {
+        productCounts[item.Medicamento] = (productCounts[item.Medicamento] || 0) + item.Quantidade;
+    });
 
-        // Gráfico de Histórico de Vendas
-        const salesHistoryCtx = document.getElementById('salesHistoryChart').getContext('2d');
-        if (salesHistoryChart) {
-            salesHistoryChart.data.labels = historyLabels;
-            salesHistoryChart.data.datasets[0].data = historyRevenueData;
-            salesHistoryChart.update();
+    const topProduct = Object.keys(productCounts).length > 0
+        ? Object.keys(productCounts).sort((a, b) => productCounts[b] - productCounts[a])[0]
+        : 'N/A';
+
+    document.getElementById('totalSales').textContent = formatNumber(totalVendas);
+    document.getElementById('totalRevenue').textContent = formatCurrency(receitaTotal);
+    document.getElementById('avgTicket').textContent = formatCurrency(ticketMedio);
+    document.getElementById('totalUnits').textContent = formatNumber(totalUnidades);
+    document.getElementById('topProduct').textContent = topProduct;
+}
+
+// Retorna dados no formato { x: 'YYYY-MM-DD', y: valor }
+function aggregateData(data, period) {
+    const aggregated = {};
+
+    data.forEach(item => {
+        let key;
+        const date = item['Data']; // Objeto Date
+
+        if (period === 'daily') {
+            key = date.toISOString().split('T')[0]; // YYYY-MM-DD
+        } else if (period === 'weekly') {
+            const d = new Date(date);
+            d.setDate(d.getDate() - d.getDay()); // Volta para o domingo
+            key = d.toISOString().split('T')[0];
+        } else if (period === 'monthly') {
+            key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-01`; // YYYY-MM-01 para consistência
+        }
+
+        if (!aggregated[key]) {
+            aggregated[key] = {
+                revenue: 0,
+                units: 0,
+                date: key // Armazena a chave para ordenação
+            };
+        }
+        aggregated[key].revenue += item['Preço Total'];
+        aggregated[key].units += item['Quantidade'];
+    });
+
+    // Converte para array e ordena por data
+    const sortedAggregated = Object.values(aggregated).sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    // Retorna no formato { x: 'YYYY-MM-DD', y: valor }
+    return sortedAggregated.map(item => ({
+        x: item.date,
+        revenue: item.revenue,
+        units: item.units
+    }));
+}
+
+function renderCharts(data, period) {
+    const aggregatedDataPoints = aggregateData(data, period);
+
+    // Se não houver dados agregados, limpa os gráficos e exibe mensagem
+    if (aggregatedDataPoints.length === 0) {
+        console.warn("Não há dados agregados para renderizar os gráficos.");
+        if (historicalChart) historicalChart.destroy();
+        if (projectionChart) projectionChart.destroy();
+
+        const historicalCanvas = document.getElementById('historicalChart');
+        if (historicalCanvas) {
+            const ctxHistorical = historicalCanvas.getContext('2d');
+            ctxHistorical.clearRect(0, 0, historicalCanvas.width, historicalCanvas.height);
+            ctxHistorical.font = "16px Arial";
+            ctxHistorical.textAlign = "center";
+            ctxHistorical.fillStyle = "#666";
+            ctxHistorical.fillText("Sem dados para exibir o histórico.", historicalCanvas.width / 2, historicalCanvas.height / 2);
+        }
+
+        const projectionCanvas = document.getElementById('projectionChart');
+        if (projectionCanvas) {
+            const ctxProjection = projectionCanvas.getContext('2d');
+            ctxProjection.clearRect(0, 0, projectionCanvas.width, projectionCanvas.height);
+            ctxProjection.font = "16px Arial";
+            ctxProjection.textAlign = "center";
+            ctxProjection.fillStyle = "#666";
+            ctxProjection.fillText("Sem dados para exibir a projeção.", projectionCanvas.width / 2, projectionCanvas.height / 2);
+        }
+        return;
+    }
+
+    // Lógica para a métrica de projeção
+    const projectionMetric = document.getElementById('projectionMetric').value;
+    const historicalMetricData = aggregatedDataPoints.map(item => ({ x: item.x, y: item.revenue })); // Histórico sempre receita
+    const projectionValues = aggregatedDataPoints.map(item => projectionMetric === 'revenue' ? item.revenue : item.units); // Projeção alterna
+
+    const historicalMetricLabel = 'Receita (R$)';
+    const projectionMetricLabel = projectionMetric === 'revenue' ? 'Receita (R$)' : 'Unidades';
+    const historicalMetricFormat = formatCurrency;
+    const projectionMetricFormat = projectionMetric === 'revenue' ? formatCurrency : formatNumber;
+    const labelsForChart = aggregatedDataPoints.map(item => item.x);
+
+    // --- Gráfico Histórico de Vendas ---
+    const historicalCanvas = document.getElementById('historicalChart');
+    if (historicalCanvas) {
+        const ctxHistorical = historicalCanvas.getContext('2d');
+        if (historicalChart) {
+            historicalChart.data.labels = labelsForChart;
+            historicalChart.data.datasets[0].data = historicalMetricData;
+            historicalChart.options.scales.x.time.unit = period === 'daily' ? 'day' : (period === 'weekly' ? 'week' : 'month');
+            historicalChart.options.scales.x.time.tooltipFormat = period === 'daily' ? 'dd/MM/yyyy' : (period === 'weekly' ? 'dd/MM/yyyy' : 'MM/yyyy');
+            historicalChart.options.scales.x.time.displayFormats.day = 'dd/MM';
+            historicalChart.options.scales.x.time.displayFormats.week = 'dd/MM';
+            historicalChart.options.scales.x.time.displayFormats.month = 'MM/yyyy';
+            historicalChart.update();
         } else {
-            salesHistoryChart = new Chart(salesHistoryCtx, {
+            historicalChart = new Chart(ctxHistorical, {
                 type: 'bar',
                 data: {
-                    labels: historyLabels,
+                    labels: labelsForChart,
                     datasets: [{
-                        label: 'Receita Total',
-                        data: historyRevenueData,
+                        label: historicalMetricLabel,
+                        data: historicalMetricData,
                         backgroundColor: 'rgba(0, 72, 72, 0.6)',
-                        borderColor: 'rgba(0, 72, 72, 1)',
+                        borderColor: 'rgb(0, 72, 72)',
                         borderWidth: 1
                     }]
                 },
@@ -241,29 +412,21 @@
                         x: {
                             type: 'time',
                             time: {
-                                unit: selectedPeriod,
+                                parser: 'yyyy-MM-dd',
+                                unit: period === 'daily' ? 'day' : (period === 'weekly' ? 'week' : 'month'),
+                                tooltipFormat: period === 'daily' ? 'dd/MM/yyyy' : (period === 'weekly' ? 'dd/MM/yyyy' : 'MM/yyyy'),
                                 displayFormats: {
-                                    daily: 'dd/MM/yy',
-                                    weekly: 'dd/MM/yy',
-                                    monthly: 'MM/yy'
+                                    day: 'dd/MM',
+                                    week: 'dd/MM',
+                                    month: 'MM/yyyy'
                                 }
                             },
-                            title: {
-                                display: true,
-                                text: 'Período'
-                            }
+                            title: { display: true, text: 'Período' }
                         },
                         y: {
                             beginAtZero: true,
-                            title: {
-                                display: true,
-                                text: 'Receita (R$)'
-                            },
-                            ticks: {
-                                callback: function(value) {
-                                    return formatCurrency(value);
-                                }
-                            }
+                            title: { display: true, text: historicalMetricLabel },
+                            ticks: { callback: function(value) { return historicalMetricFormat(value); } }
                         }
                     },
                     plugins: {
@@ -271,12 +434,8 @@
                             callbacks: {
                                 label: function(context) {
                                     let label = context.dataset.label || '';
-                                    if (label) {
-                                        label += ': ';
-                                    }
-                                    if (context.parsed.y !== null) {
-                                        label += formatCurrency(context.parsed.y);
-                                    }
+                                    if (label) { label += ': '; }
+                                    if (context.parsed.y !== null) { label += historicalMetricFormat(context.parsed.y); }
                                     return label;
                                 }
                             }
@@ -285,41 +444,86 @@
                 }
             });
         }
+    } else {
+        console.warn("Elemento 'historicalChart' não encontrado. Gráfico histórico não será renderizado.");
+    }
 
-        // Gráfico de Projeção de Vendas
-        const salesProjectionCtx = document.getElementById('salesProjectionChart').getContext('2d');
-        if (salesProjectionChart) {
-            salesProjectionChart.data.labels = projectionLabels;
-            salesProjectionChart.data.datasets[0].data = projectionValues;
-            // NOVO: Atualizar o label do dataset e o título do eixo Y
-            salesProjectionChart.data.datasets[0].label = selectedProjectionMetric === 'revenue' ? 'Receita Projetada' : 'Unidades Projetadas';
-            salesProjectionChart.options.scales.y.title.text = selectedProjectionMetric === 'revenue' ? 'Receita (R$)' : 'Unidades';
-            // NOVO: Atualizar o callback do tick e do tooltip
-            salesProjectionChart.options.scales.y.ticks.callback = function(value) {
-                return selectedProjectionMetric === 'revenue' ? formatCurrency(value) : value.toLocaleString('pt-BR');
+    // --- Gráfico de Projeção de Vendas ---
+    const projectionDataPoints = [];
+    const numFuturePeriods = 3;
+
+    if (projectionValues.length > 0) { // Usar projectionValues para base da projeção
+        const lastDataPoint = projectionValues[projectionValues.length - 1];
+        const lastDate = new Date(aggregatedDataPoints[aggregatedDataPoints.length - 1].x); // Usar a data do último ponto agregado
+        const lastValue = lastDataPoint;
+
+        for (let i = 1; i <= numFuturePeriods; i++) {
+            let nextDate = new Date(lastDate);
+            let nextDateKey;
+            if (period === 'daily') {
+                nextDate.setDate(lastDate.getDate() + i);
+                nextDateKey = nextDate.toISOString().split('T')[0];
+            } else if (period === 'weekly') {
+                nextDate.setDate(lastDate.getDate() + (i * 7));
+                nextDateKey = nextDate.toISOString().split('T')[0];
+            } else if (period === 'monthly') {
+                nextDate.setMonth(lastDate.getMonth() + i);
+                nextDateKey = `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, '0')}-01`;
+            }
+            projectionDataPoints.push({ x: nextDateKey, y: lastValue });
+        }
+    }
+
+    const projectionCanvas = document.getElementById('projectionChart');
+    if (projectionCanvas) {
+        const ctxProjection = projectionCanvas.getContext('2d');
+        const combinedLabels = labelsForChart.concat(projectionDataPoints.map(item => item.x));
+        // Criar um array com nulls para o histórico e depois a projeção
+        const combinedDataForProjectionChart = Array(projectionValues.length - 1).fill(null).concat([projectionValues[projectionValues.length - 1]], projectionDataPoints.map(item => item.y));
+
+
+        if (projectionChart) {
+            projectionChart.data.labels = combinedLabels;
+            projectionChart.data.datasets[0].data = projectionValues; // Dados históricos da métrica selecionada
+            projectionChart.data.datasets[0].label = projectionMetricLabel + ' (Histórico)';
+            projectionChart.data.datasets[1].data = combinedDataForProjectionChart; // Dados de projeção
+            projectionChart.data.datasets[1].label = projectionMetricLabel + ' (Projeção)';
+
+            projectionChart.options.scales.x.time.unit = period === 'daily' ? 'day' : (period === 'weekly' ? 'week' : 'month');
+            projectionChart.options.scales.x.time.tooltipFormat = period === 'daily' ? 'dd/MM/yyyy' : (period === 'weekly' ? 'dd/MM/yyyy' : 'MM/yyyy');
+            projectionChart.options.scales.x.time.displayFormats.day = 'dd/MM';
+            projectionChart.options.scales.x.time.displayFormats.week = 'dd/MM';
+            projectionChart.options.scales.x.time.displayFormats.month = 'MM/yyyy';
+
+            projectionChart.options.scales.y.title.text = projectionMetricLabel;
+            projectionChart.options.scales.y.ticks.callback = function(value) {
+                return projectionMetricFormat(value);
             };
-            salesProjectionChart.options.plugins.tooltip.callbacks.label = function(context) {
+            projectionChart.options.plugins.tooltip.callbacks.label = function(context) {
                 let label = context.dataset.label || '';
-                if (label) {
-                    label += ': ';
-                }
-                if (context.parsed.y !== null) {
-                    label += selectedProjectionMetric === 'revenue' ? formatCurrency(context.parsed.y) : context.parsed.y.toLocaleString('pt-BR');
-                }
+                if (label) { label += ': '; }
+                if (context.parsed.y !== null) { label += projectionMetricFormat(context.parsed.y); }
                 return label;
             };
-            salesProjectionChart.update();
+            projectionChart.update();
         } else {
-            salesProjectionChart = new Chart(salesProjectionCtx, {
+            projectionChart = new Chart(ctxProjection, {
                 type: 'line',
                 data: {
-                    labels: projectionLabels,
+                    labels: combinedLabels,
                     datasets: [{
-                        label: selectedProjectionMetric === 'revenue' ? 'Receita Projetada' : 'Unidades Projetadas', // NOVO: Label dinâmico
-                        data: projectionValues,
+                        label: projectionMetricLabel + ' (Histórico)',
+                        data: projectionValues, // Dados históricos da métrica selecionada
+                        borderColor: 'rgb(0, 72, 72)',
+                        backgroundColor: 'rgba(0, 72, 72, 0.2)',
+                        fill: false,
+                        tension: 0.1
+                    }, {
+                        label: projectionMetricLabel + ' (Projeção)',
+                        data: combinedDataForProjectionChart, // Dados de projeção
+                        borderColor: 'rgb(255, 99, 132)', 
                         backgroundColor: 'rgba(255, 99, 132, 0.2)',
-                        borderColor: 'rgba(255, 99, 132, 1)',
-                        borderWidth: 2,
+                        borderDash: [5, 5],
                         fill: false,
                         tension: 0.1
                     }]
@@ -331,29 +535,21 @@
                         x: {
                             type: 'time',
                             time: {
-                                unit: selectedPeriod,
+                                parser: 'yyyy-MM-dd',
+                                unit: period === 'daily' ? 'day' : (period === 'weekly' ? 'week' : 'month'),
+                                tooltipFormat: period === 'daily' ? 'dd/MM/yyyy' : (period === 'weekly' ? 'dd/MM/yyyy' : 'MM/yyyy'),
                                 displayFormats: {
-                                    daily: 'dd/MM/yy',
-                                    weekly: 'dd/MM/yy',
-                                    monthly: 'MM/yy'
+                                    day: 'dd/MM',
+                                    week: 'dd/MM',
+                                    month: 'MM/yyyy'
                                 }
                             },
-                            title: {
-                                display: true,
-                                text: 'Período'
-                            }
+                            title: { display: true, text: 'Período' }
                         },
                         y: {
                             beginAtZero: true,
-                            title: {
-                                display: true,
-                                text: selectedProjectionMetric === 'revenue' ? 'Receita (R$)' : 'Unidades' // NOVO: Título dinâmico
-                            },
-                            ticks: {
-                                callback: function(value) {
-                                    return selectedProjectionMetric === 'revenue' ? formatCurrency(value) : value.toLocaleString('pt-BR'); // NOVO: Callback dinâmico
-                                }
-                            }
+                            title: { display: true, text: projectionMetricLabel },
+                            ticks: { callback: function(value) { return projectionMetricFormat(value); } }
                         }
                     },
                     plugins: {
@@ -361,12 +557,8 @@
                             callbacks: {
                                 label: function(context) {
                                     let label = context.dataset.label || '';
-                                    if (label) {
-                                        label += ': ';
-                                    }
-                                    if (context.parsed.y !== null) {
-                                        label += selectedProjectionMetric === 'revenue' ? formatCurrency(context.parsed.y) : context.parsed.y.toLocaleString('pt-BR'); // NOVO: Callback dinâmico
-                                    }
+                                    if (label) { label += ': '; }
+                                    if (context.parsed.y !== null) { label += projectionMetricFormat(context.parsed.y); }
                                     return label;
                                 }
                             }
@@ -375,47 +567,59 @@
                 }
             });
         }
+    } else {
+        console.warn("Elemento 'projectionChart' não encontrado. Gráfico de projeção não será renderizado.");
     }
+}
 
-    // Função para agrupar dados por período (diário, semanal, mensal)
-    function groupDataByPeriod(data, period) {
-        const grouped = {};
-
-        data.forEach(item => {
-            let key;
-            const date = item['Data'];
-
-            if (period === 'daily') {
-                key = date.toISOString().split('T')[0]; // YYYY-MM-DD
-            } else if (period === 'weekly') {
-                // Para semana, usar o primeiro dia da semana (domingo)
-                const d = new Date(date);
-                d.setDate(date.getDate() - date.getDay()); // Ir para o domingo da semana
-                key = d.toISOString().split('T')[0];
-            } else if (period === 'monthly') {
-                key = date.toISOString().substring(0, 7); // YYYY-MM
-            }
-
-            if (!grouped[key]) {
-                grouped[key] = {
-                    period: key,
-                    revenue: 0,
-                    units: 0
-                };
-            }
-            grouped[key].revenue += item['Preço Total'];
-            grouped[key].units += item['Quantidade'];
-        });
-
-        // Converter para array e ordenar
-        const result = Object.values(grouped).sort((a, b) => new Date(a.period) - new Date(b.period));
-
-        return result;
+function updateTable(data) {
+    const tableBody = document.getElementById('salesTableBody');
+    if (!tableBody) {
+        console.error("Elemento 'salesTableBody' não encontrado.");
+        return;
     }
+    tableBody.innerHTML = ''; // Limpa a tabela existente
 
-    // Inicialização
-    document.addEventListener('DOMContentLoaded', async () => {
-        salesData = await parseCSV();
-        initializeFilters();
-        applyFilters(); // Aplica os filtros iniciais e renderiza tudo
+    const displayLimit = 500;
+    const dataToDisplay = data.slice(0, displayLimit);
+
+    dataToDisplay.forEach(item => {
+        const row = tableBody.insertRow();
+        row.insertCell().textContent = item.Data.toLocaleDateString('pt-BR');
+        row.insertCell().textContent = item.Medicamento;
+        row.insertCell().textContent = item.Categoria;
+        row.insertCell().textContent = formatNumber(item.Quantidade);
+        row.insertCell().textContent = formatCurrency(item['Preço Unitário']);
+        row.insertCell().textContent = formatCurrency(item['Preço Total']);
+        row.insertCell().textContent = item.Cidade;
+        row.insertCell().textContent = item.Vendedor;
     });
+
+    document.getElementById('tableTitle').textContent = `📋 Detalhamento Diário (Máximo ${dataToDisplay.length} linhas)`;
+    if (data.length > displayLimit) {
+        console.warn(`Exibindo apenas as primeiras ${displayLimit} linhas. Total de registros: ${data.length}`);
+    }
+}
+
+function updateLastUpdateDate() {
+    const lastUpdateDateElement = document.getElementById('lastUpdateDate');
+    if (lastUpdateDateElement) {
+        const now = new Date();
+        const options = {
+            day: '2-digit',
+            month: 'long',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        };
+        lastUpdateDateElement.textContent = now.toLocaleDateString('pt-BR', options);
+    }
+}
+
+// Event Listeners
+document.addEventListener('DOMContentLoaded', () => {
+    loadCSV();
+    // Os event listeners são adicionados dentro de initializeFilters() para evitar duplicação
+    // e garantir que os elementos estejam populados antes de adicionar listeners.
+});
