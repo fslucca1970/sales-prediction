@@ -89,8 +89,6 @@ function parseCSV(csv) {
             row['Data'] = date; // Armazena o objeto Date parseado
 
             // Usar 'Preço' do CSV para Preço Unitário
-            // CORREÇÃO CIRÚRGICA AQUI: Removendo apenas 'R$' e espaços, sem mexer no ponto decimal.
-            // E corrigindo o erro de digitação da variável.
             let precoUnitarioRaw = String(row['Preço'] || '0').replace('R$', '').trim();
             const precoUnitario = parseFloat(precoUnitarioRaw); // <-- CORRIGIDO AQUI
             if (isNaN(precoUnitario)) {
