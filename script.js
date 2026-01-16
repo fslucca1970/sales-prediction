@@ -354,8 +354,8 @@ function renderCharts(data, period) {
     }
 
     // Usaremos sempre a receita para esta versão revertida
-    const historicalMetricData = aggregatedDataPoints.map(item => ({ x: item.x, y: item.revenue }));
-    const historicalMetricLabel = 'Receita (R$)';
+    const historicalRevenueDataPoints = aggregatedDataPoints.map(item => ({ x: item.x, y: item.revenue }));
+    const historicalMetricLabel = 'Receita (R$)'; // Métrica padrão para a versão revertida
     const historicalMetricFormat = formatCurrency;
     const labelsForChart = aggregatedDataPoints.map(item => item.x); // Usado para labels do eixo X
 
@@ -373,7 +373,7 @@ function renderCharts(data, period) {
                 labels: labelsForChart, // Passa as strings de data para o eixo X
                 datasets: [{
                     label: historicalMetricLabel,
-                    data: historicalMetricData, // Passa os objetos {x,y}
+                    data: historicalRevenueDataPoints, // Dados de receita
                     backgroundColor: 'rgba(0, 72, 72, 0.6)',
                     borderColor: 'rgb(0, 72, 72)',
                     borderWidth: 1
@@ -440,8 +440,8 @@ function renderCharts(data, period) {
     const projectionDataPoints = [];
     const numFuturePeriods = 3; // Projetar para 3 períodos futuros
 
-    if (historicalMetricData.length > 0) {
-        const lastDataPoint = historicalMetricData[historicalMetricData.length - 1];
+    if (historicalRevenueDataPoints.length > 0) {
+        const lastDataPoint = historicalRevenueDataPoints[historicalRevenueDataPoints.length - 1];
         const lastDate = new Date(lastDataPoint.x);
         const lastValue = lastDataPoint.y;
 
@@ -472,7 +472,7 @@ function renderCharts(data, period) {
                 labels: labelsForChart.concat(projectionDataPoints.map(item => item.x)), // Combina labels históricos e de projeção
                 datasets: [{
                     label: historicalMetricLabel + ' (Histórico)',
-                    data: historicalMetricData, // Passa os objetos {x,y}
+                    data: historicalRevenueDataPoints, // Dados de receita
                     borderColor: 'rgb(0, 72, 72)',
                     backgroundColor: 'rgba(0, 72, 72, 0.2)',
                     fill: false,
@@ -480,7 +480,7 @@ function renderCharts(data, period) {
                 }, {
                     label: historicalMetricLabel + ' (Projeção)',
                     // Cria um array com nulls para o histórico e depois a projeção
-                    data: Array(historicalMetricData.length - 1).fill(null).concat([historicalMetricData[historicalMetricData.length - 1]], projectionDataPoints),
+                    data: Array(historicalRevenueDataPoints.length - 1).fill(null).concat([historicalRevenueDataPoints[historicalRevenueDataPoints.length - 1]], projectionDataPoints),
                     borderColor: 'rgb(255, 99, 132)', 
                     backgroundColor: 'rgba(255, 99, 132, 0.2)',
                     borderDash: [5, 5],
