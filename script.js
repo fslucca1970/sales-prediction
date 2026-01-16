@@ -92,7 +92,7 @@ function parseCSV(csv) {
             // CORREÇÃO CIRÚRGICA AQUI: Removendo apenas 'R$' e espaços, sem mexer no ponto decimal.
             // E corrigindo o erro de digitação da variável.
             let precoUnitarioRaw = String(row['Preço'] || '0').replace('R$', '').trim();
-            const precoUnitario = parseFloat(precoUnitarioRaw);
+            const precoUnitario = parseFloat(precoUnitarioRaw); // <-- CORRIGIDO AQUI
             if (isNaN(precoUnitario)) {
                 console.warn(`Linha ${i + 1}: Preço Unitário inválido "${row['Preço']}". Usando 0.`);
                 isValidRow = false;
@@ -371,7 +371,7 @@ function renderCharts(data, period) {
     // Lógica para a métrica de projeção
     const projectionMetric = document.getElementById('projectionMetric').value;
     const historicalMetricData = aggregatedDataPoints.map(item => ({ x: item.x, y: item.revenue })); // Histórico sempre receita
-    const projectionValues = aggregatedDataPoints.map(item => projectionMetric === 'revenue' ? item.revenue : item.units); // Projeção alterna
+    const projectionValues = aggregatedDataPoints.map(item => ({ x: item.x, y: projectionMetric === 'revenue' ? item.revenue : item.units })); // Projeção alterna
 
     const historicalMetricLabel = 'Receita (R$)';
     const projectionMetricLabel = projectionMetric === 'revenue' ? 'Receita (R$)' : 'Unidades';
@@ -454,8 +454,8 @@ function renderCharts(data, period) {
 
     if (projectionValues.length > 0) { // Usar projectionValues para base da projeção
         const lastDataPoint = projectionValues[projectionValues.length - 1];
-        const lastDate = new Date(aggregatedDataPoints[aggregatedDataPoints.length - 1].x); // Usar a data do último ponto agregado
-        const lastValue = lastDataPoint;
+        const lastDate = new Date(lastDataPoint.x); // Usar a data do último ponto agregado
+        const lastValue = lastDataPoint.y;
 
         for (let i = 1; i <= numFuturePeriods; i++) {
             let nextDate = new Date(lastDate);
@@ -479,7 +479,7 @@ function renderCharts(data, period) {
         const ctxProjection = projectionCanvas.getContext('2d');
         const combinedLabels = labelsForChart.concat(projectionDataPoints.map(item => item.x));
         // Criar um array com nulls para o histórico e depois a projeção
-        const combinedDataForProjectionChart = Array(projectionValues.length - 1).fill(null).concat([projectionValues[projectionValues.length - 1]], projectionDataPoints.map(item => item.y));
+        const combinedDataForProjectionChart = Array(projectionValues.length - 1).fill(null).concat([projectionValues[projectionValues.length - 1].y], projectionDataPoints.map(item => item.y));
 
 
         if (projectionChart) {
@@ -570,6 +570,8 @@ function renderCharts(data, period) {
     } else {
         console.warn("Elemento 'projectionChart' não encontrado. Gráfico de projeção não será renderizado.");
     }
+    // Atualiza o label no título do gráfico de projeção
+    document.getElementById('projectionMetricLabel').textContent = projectionMetric === 'revenue' ? 'Receita' : 'Unidades';
 }
 
 function updateTable(data) {
